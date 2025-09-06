@@ -5,7 +5,7 @@
 namespace ParMatrixMult;
 
 /// <summary>
-/// 
+/// Class with multiplication functions.
 /// </summary>
 public class Multiplication
 {
@@ -15,8 +15,23 @@ public class Multiplication
     /// <param name="first">The first matrix.</param>
     /// <param name="second">The second matrix.</param>
     /// <returns>Matrix of multiplication.</returns>
-    public int[,] ParallelMult(Matrix first, Matrix second)
+    public Matrix ParallelMult(Matrix first, Matrix second)
     {
+        var newMatrix = new Matrix();
+        var threads = new Thread[first.GetRows()];
+        for (int i = 0; i < threads.Length; ++i)
+        {
+            var currentIndex = i;
+            threads[i] = new Thread(() => this.MultiplyRow(first, second, newMatrix, currentIndex));
+            threads[i].Start();
+        }
+
+        foreach (var thread in threads)
+        {
+            thread.Join();
+        }
+
+        return newMatrix;
     }
 
     /// <summary>
@@ -43,5 +58,21 @@ public class Multiplication
         }
 
         return newMatrix;
+    }
+
+    private void MultiplyRow(Matrix first, Matrix second, Matrix result, int index)
+    {
+        for (int i = 0; i < second.GetColumns(); ++i)
+        {
+            int sum = 0;
+            for (int k = 0; k < first.GetColumns(); ++k)
+            {
+                sum += first.GetMatrix()[index, k] * second.GetMatrix()[k, i];
+            }
+
+            result.GetMatrix()[index, i] = sum;
+        }
+
+        System.Console.WriteLine($"Thread {Thread.CurrentThread.ManagedThreadId} finished the row number {index + 1}!");
     }
 }

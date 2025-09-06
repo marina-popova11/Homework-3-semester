@@ -18,6 +18,7 @@ public class Matrix
     /// </summary>
     public Matrix()
     {
+        this.matrix = new int[0, 0];
     }
 
     /// <summary>
@@ -55,6 +56,37 @@ public class Matrix
                 this.matrix[i, j] = int.Parse(numbers[j].Trim());
             }
         }
+    }
+
+    /// <summary>
+    /// Outputs the matrix to a file.
+    /// </summary>
+    /// <param name="matrix">Matrix.</param>
+    /// <param name="filename">Name of file.</param>
+    /// <returns>True, if it is good.</returns>
+    public bool PutMatrixToFile(Matrix matrix, string filename)
+    {
+        using var writer = new StreamWriter(filename);
+        writer.Write("(");
+        for (int i = 0; i < matrix.GetRows(); ++i)
+        {
+            if (i > 0)
+            {
+                writer.Write("\n ");
+            }
+
+            for (int j = 0; j < matrix.GetColumns(); ++j)
+            {
+                writer.Write(matrix.GetMatrix()[i, j]);
+                if (j <= matrix.GetColumns() - 1)
+                {
+                    writer.Write(", ");
+                }
+            }
+        }
+
+        writer.Write(")");
+        return true;
     }
 
     /// <summary>
