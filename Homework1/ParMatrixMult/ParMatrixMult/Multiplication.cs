@@ -4,6 +4,8 @@
 
 namespace ParMatrixMult;
 
+using System.Diagnostics;
+
 /// <summary>
 /// Class with multiplication functions.
 /// </summary>
@@ -33,8 +35,14 @@ public class Multiplication
     /// <param name="second">The second matrix.</param>
     /// <param name="maxThread">The max number of parallel threads.</param>
     /// <returns>Matrix of multiplication.</returns>
+    /// <exception cref="ArgumentException">If matrices` sizes doesn`t match.</exception>
     public Matrix ParallelMult(Matrix first, Matrix second, int maxThread)
     {
+        if (!this.CompareMatrixDim(first, second))
+        {
+            throw new ArgumentException();
+        }
+
         var newMatrix = new Matrix(first.GetRows(), second.GetColumns());
         var semaphore = new SemaphoreSlim(maxThread, maxThread);
         var threads = new List<Thread>();
@@ -72,11 +80,12 @@ public class Multiplication
     /// <param name="first">The first matrix.</param>
     /// <param name="second">The second matrix.</param>
     /// <returns>Matrix of multiplication.</returns>
+    /// <exception cref="ArgumentException">If matrices` sizes doesn`t match.</exception>
     public Matrix SequentialMult(Matrix first, Matrix second)
     {
         if (!this.CompareMatrixDim(first, second))
         {
-            return null!;
+            throw new ArgumentException();
         }
 
         var newMatrix = new Matrix(first.GetRows(), second.GetColumns());
@@ -116,6 +125,28 @@ public class Multiplication
         }
 
         return newMatrix;
+    }
+
+    /// <summary>
+    /// Measures the multiplication performance.
+    /// </summary>
+    /// <param name="operation">A pointer to the function that needs to be measured.</param>
+    /// <param name="runs">The number of launches from which we take the average value.</param>
+    /// <returns>The total time of operation.</returns>
+    public double PerformanceMeasurement(Func<Matrix> operation, int runs)
+    {
+        operation();
+        double totalTime = 0;
+        var stopwatch = new Stopwatch();
+        for (int i = 0; i < runs; ++i)
+        {
+            stopwatch.Restart();
+            operation();
+            stopwatch.Stop();
+            totalTime += stopwatch.Elapsed.TotalMilliseconds;
+        }
+
+        return totalTime / runs;
     }
 
     private void MultiplyRow(Matrix first, Matrix second, Matrix result, int index)

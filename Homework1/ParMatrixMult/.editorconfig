@@ -2,3 +2,6 @@
 
 # SA1122: Use string.Empty for empty strings
 dotnet_diagnostic.SA1122.severity = none
+
+# CS8618: Поле, не допускающее значения NULL, должно содержать значение, отличное от NULL, при выходе из конструктора. Рассмотрите возможность добавления модификатора "required" или объявления значения, допускающего значение NULL.
+dotnet_diagnostic.CS8618.severity = none
