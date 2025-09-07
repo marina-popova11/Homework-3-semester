@@ -10,20 +10,52 @@ namespace ParMatrixMult;
 public class Multiplication
 {
     /// <summary>
+    /// Compare two matrix`s dims to multiply them.
+    /// </summary>
+    /// <param name="first">The first matrix.</param>
+    /// <param name="second">The second matrix.</param>
+    /// <returns>True if their dimensions match, False otherwise.</returns>
+    /// <exception cref="ArgumentException">If matrices` sizes doesn`t match.</exception>
+    public bool CompareMatrixDim(Matrix first, Matrix second)
+    {
+        if (first.GetColumns() != second.GetRows())
+        {
+            throw new ArgumentException();
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Multiplies matrices in parallel.
     /// </summary>
     /// <param name="first">The first matrix.</param>
     /// <param name="second">The second matrix.</param>
+    /// <param name="maxThread">The max number of parallel threads.</param>
     /// <returns>Matrix of multiplication.</returns>
-    public Matrix ParallelMult(Matrix first, Matrix second)
+    public Matrix ParallelMult(Matrix first, Matrix second, int maxThread)
     {
-        var newMatrix = new Matrix();
-        var threads = new Thread[first.GetRows()];
-        for (int i = 0; i < threads.Length; ++i)
+        var newMatrix = new Matrix(first.GetRows(), second.GetColumns());
+        var semaphore = new SemaphoreSlim(maxThread, maxThread);
+        var threads = new List<Thread>();
+        for (int i = 0; i < first.GetRows(); ++i)
         {
-            var currentIndex = i;
-            threads[i] = new Thread(() => this.MultiplyRow(first, second, newMatrix, currentIndex));
-            threads[i].Start();
+            int currentIndex = i;
+            var thread = new Thread(() =>
+            {
+                semaphore.Wait(); // Wait permissions from the semaphore before work, until at least one permitted thread is executed
+                try
+                {
+                    this.MultiplyRow(first, second, newMatrix, currentIndex);
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
+
+            threads.Add(thread);
+            thread.Start(); // Here thread start his work which i specified it in line 28
         }
 
         foreach (var thread in threads)
@@ -42,7 +74,12 @@ public class Multiplication
     /// <returns>Matrix of multiplication.</returns>
     public Matrix SequentialMult(Matrix first, Matrix second)
     {
-        var newMatrix = new Matrix();
+        if (!this.CompareMatrixDim(first, second))
+        {
+            return null!;
+        }
+
+        var newMatrix = new Matrix(first.GetRows(), second.GetColumns());
         for (int i = 0; i < first.GetRows(); ++i)
         {
             for (int j = 0; j < second.GetColumns(); ++j)
@@ -53,7 +90,28 @@ public class Multiplication
                     sum += first.GetMatrix()[i, k] * second.GetMatrix()[k, j];
                 }
 
-                newMatrix.GetMatrix()[i, j] = sum;
+                newMatrix.SetMatrix(i, j, sum);
+            }
+        }
+
+        return newMatrix;
+    }
+
+    /// <summary>
+    /// Create random matrix with certain count of rows and columns.
+    /// </summary>
+    /// <param name="rows">Rows.</param>
+    /// <param name="columns">Columns.</param>
+    /// <returns>random matrix.</returns>
+    public Matrix CreateRandomMatrix(int rows, int columns)
+    {
+        var rand = new Random();
+        var newMatrix = new Matrix(rows, columns);
+        for (int i = 0; i < newMatrix.GetRows(); ++i)
+        {
+            for (int j = 0; j < newMatrix.GetColumns(); ++j)
+            {
+                newMatrix.SetMatrix(i, j, rand.Next(1, 20));
             }
         }
 
@@ -70,7 +128,7 @@ public class Multiplication
                 sum += first.GetMatrix()[index, k] * second.GetMatrix()[k, i];
             }
 
-            result.GetMatrix()[index, i] = sum;
+            result.SetMatrix(index, i, sum);
         }
 
         System.Console.WriteLine($"Thread {Thread.CurrentThread.ManagedThreadId} finished the row number {index + 1}!");

@@ -16,25 +16,20 @@ public class Matrix
     /// <summary>
     /// Initializes a new instance of the <see cref="Matrix"/> class.
     /// </summary>
-    public Matrix()
+    /// <param name="rows">Number of rows.</param>
+    /// <param name="columns">Number of columns.</param>
+    public Matrix(int rows, int columns)
     {
-        this.matrix = new int[0, 0];
+        this.matrix = new int[rows, columns];
+        this.rows = this.matrix.GetLength(0);
+        this.columns = this.matrix.GetLength(1);
     }
 
     /// <summary>
-    /// Compare two matrix`s dims to multiply them.
+    /// Initializes a new instance of the <see cref="Matrix"/> class.
     /// </summary>
-    /// <param name="first">The first matrix.</param>
-    /// <param name="second">The second matrix.</param>
-    /// <returns>True if their dimensions match, False otherwise.</returns>
-    public bool CompareMatrixDim(Matrix first, Matrix second)
+    public Matrix()
     {
-        if (first.columns != second.rows)
-        {
-            return false;
-        }
-
-        return true;
     }
 
     /// <summary>
@@ -96,6 +91,14 @@ public class Matrix
     public int[,] GetMatrix() => this.matrix;
 
     /// <summary>
+    /// Changes the value in the cell.
+    /// </summary>
+    /// <param name="first">First coordinate.</param>
+    /// <param name="second">Second coordinate..</param>
+    /// <param name="value">New value.</param>
+    public void SetMatrix(int first, int second, int value) => this.matrix[first, second] = value;
+
+    /// <summary>
     /// Get matrix`s rows.
     /// </summary>
     /// <returns>Rows.</returns>
@@ -106,4 +109,16 @@ public class Matrix
     /// </summary>
     /// <returns>Columns.</returns>
     public int GetColumns() => this.columns;
+
+    /// <summary>
+    /// Changes the value of rows.
+    /// </summary>
+    /// <param name="value">New number of rows.</param>
+    public void SetRows(int value) => this.rows = value;
+
+    /// <summary>
+    /// Changes the value of columns.
+    /// </summary>
+    /// <param name="value">New number of columns.</param>
+    public void SetColumns(int value) => this.columns = value;
 }
