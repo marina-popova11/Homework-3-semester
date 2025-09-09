@@ -36,9 +36,15 @@ public class Matrix
     /// Returns a matrix from a file.
     /// </summary>
     /// <param name="filename">Name of file.</param>
+    /// <exception cref="ArgumentException">If filename does not include characters.</exception>
     /// <exception cref="FileNotFoundException">If file doesn`t exist.</exception>
     public void GetMatrixFromFile(string filename)
     {
+        if (string.IsNullOrEmpty(filename))
+        {
+            throw new ArgumentException();
+        }
+
         if (!File.Exists(filename))
         {
             throw new FileNotFoundException();

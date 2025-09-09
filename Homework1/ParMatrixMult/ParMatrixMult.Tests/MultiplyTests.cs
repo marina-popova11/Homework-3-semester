@@ -6,13 +6,43 @@ namespace ParMatrixMult.Tests;
 
 public class MultiplyTests
 {
+    private static Matrix firstMatrix;
+    private static Matrix secondMatrix;
+    private static Multiplication multiply = new Multiplication();
+
     [SetUp]
-    public void Setup()
+    public static void SetUp()
     {
+        firstMatrix = multiply.CreateRandomMatrix(15, 20);
+        secondMatrix = multiply.CreateRandomMatrix(20, 30);
     }
+
     [Test]
-    public void Test1()
+    public void Test_CompareMatricesDimIfTrue()
     {
-        Assert.Pass();
+        Assert.That(multiply.CompareMatrixDim(firstMatrix, secondMatrix), Is.True);
+    }
+
+    [Test]
+    public void Test_Test_CompareMatricesDimIfFalse()
+    {
+        firstMatrix.SetColumns(25);
+        Assert.Throws<ArgumentException>(() => multiply.CompareMatrixDim(firstMatrix, secondMatrix));
+    }
+
+    [Test]
+    public void Test_SequentialMultiply()
+    {
+        var newMatrix = multiply.SequentialMultiply(firstMatrix, secondMatrix);
+        Assert.That(newMatrix.GetRows(), Is.EqualTo(15));
+        Assert.That(newMatrix.GetColumns(), Is.EqualTo(30));
+    }
+
+    [Test]
+    public void Test_ParallelMultiply()
+    {
+        var newMatrix = multiply.ParallelMultiply(firstMatrix, secondMatrix, Environment.ProcessorCount);
+        Assert.That(newMatrix.GetRows(), Is.EqualTo(15));
+        Assert.That(newMatrix.GetColumns(), Is.EqualTo(30));
     }
 }

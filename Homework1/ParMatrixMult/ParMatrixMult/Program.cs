@@ -14,8 +14,8 @@ else if (args.Length == 3)
 }
 else
 {
-    System.Console.WriteLine("For performance tests: ParMatrixMult");
-    System.Console.WriteLine("For file multiplication: ParMatrixMult matrix1.txt matrix2.txt result.txt");
+    Console.WriteLine("For performance tests: ParMatrixMult");
+    Console.WriteLine("For file multiplication: ParMatrixMult matrix1.txt matrix2.txt result.txt");
 }
 
 static void MultiplyTwoMatrices(string file1, string file2, string outputFile)
@@ -37,13 +37,13 @@ static void MultiplyTwoMatrices(string file1, string file2, string outputFile)
                 $"Matrix2 [{secondMatrix.GetRows()}x{secondMatrix.GetColumns()}]");
         }
 
-        System.Console.WriteLine("Sequential matrix multiplication: ");
-        Matrix sequentialMatrix = result.SequentialMult(firstMatrix, secondMatrix);
-        System.Console.WriteLine($"Result: Matrix [{sequentialMatrix.GetRows()}x{sequentialMatrix.GetColumns()}]");
+        Console.WriteLine("Sequential matrix multiplication: ");
+        Matrix sequentialMatrix = result.SequentialMultiply(firstMatrix, secondMatrix);
+        Console.WriteLine($"Result: Matrix [{sequentialMatrix.GetRows()}x{sequentialMatrix.GetColumns()}]");
 
-        System.Console.WriteLine("Parallel matrix multiplication: ");
-        Matrix parallelMatrix = result.ParallelMult(firstMatrix, secondMatrix, 4);
-        System.Console.WriteLine($"Result: Matrix [{parallelMatrix.GetRows()}x{parallelMatrix.GetColumns()}]");
+        Console.WriteLine("Parallel matrix multiplication: ");
+        Matrix parallelMatrix = result.ParallelMultiply(firstMatrix, secondMatrix, 4);
+        Console.WriteLine($"Result: Matrix [{parallelMatrix.GetRows()}x{parallelMatrix.GetColumns()}]");
 
         if ((sequentialMatrix.GetRows() == parallelMatrix.GetRows()) && (sequentialMatrix.GetColumns() == parallelMatrix.GetColumns()))
         {
@@ -52,7 +52,7 @@ static void MultiplyTwoMatrices(string file1, string file2, string outputFile)
     }
     catch (Exception ex)
     {
-        System.Console.WriteLine($"Error: {ex.Message}");
+        Console.WriteLine($"Error: {ex.Message}");
     }
 }
 
@@ -70,25 +70,35 @@ static void RunPerformanceTests()
 
     using var writer = new StreamWriter("performanceResults.txt");
     writer.WriteLine("Performance testing results: ");
-    writer.WriteLine("Dimensions\tSequential(ms)\tParallel(ms)\tSpeedup");
+    writer.WriteLine("Dimensions            \tSequential(ms)\tParallel(ms)\tSpeedup\tMean Sequential\tStd Dev Sequential\tMean Parallel\tStd Dev Parallel\t");
     foreach (var (rows, columns, common) in testMatrices)
     {
-        System.Console.WriteLine($"[{rows}x{common}] * [{common}x{columns}];");
+        Console.WriteLine($"[{rows}x{common}] * [{common}x{columns}];");
         var multiply = new Multiplication();
         var matrix1 = multiply.CreateRandomMatrix(rows, common);
         var matrix2 = multiply.CreateRandomMatrix(common, columns);
 
-        double sequentialTime = multiply.PerformanceMeasurement(
-        () => multiply.SequentialMult(matrix1, matrix2), runs);
+        var (sequentialTime, meanSequential, stdDevSequential) = multiply.PerformanceMeasurement(
+        () => multiply.SequentialMultiply(matrix1, matrix2), runs);
 
-        double parallelTime = multiply.PerformanceMeasurement(
-        () => multiply.ParallelMult(matrix1, matrix2, Environment.ProcessorCount), runs);
+        var (parallelTime, meanParallel, stdDevParallel) = multiply.PerformanceMeasurement(
+        () => multiply.ParallelMultiply(matrix1, matrix2, Environment.ProcessorCount), runs);
 
         double speedup = sequentialTime / parallelTime;
 
-        writer.WriteLine($"[{rows}x{common}] * [{common}x{columns}]\t{sequentialTime:F2}\t{parallelTime:F2}\t{speedup:F2}x");
-        Console.WriteLine($"Sequential: {sequentialTime:F2}ms ± {sequentialTime:F2}ms");
-        Console.WriteLine($"Parallel:   {parallelTime:F2}ms ± {parallelTime:F2}ms");
+        writer.WriteLine(
+            $"[{rows}x{common}] * [{common}x{columns}]" +
+            $"\t{sequentialTime,12:F2}" +
+            $"\t{parallelTime,12:F2}" +
+            $"\t{speedup,8:F2}x" +
+            $"\t{meanSequential,8:F2}" +
+            $"\t{stdDevSequential,8:F2}" +
+            $"\t{meanParallel,8:F2}" +
+            $"\t{stdDevParallel,8:F2}");
+        Console.WriteLine($"Sequential:    {sequentialTime:F2}ms");
+        Console.WriteLine($"Sequential mean and standard deviation:   {meanSequential:F2}, {stdDevSequential:F2}");
+        Console.WriteLine($"Parallel:   {parallelTime:F2}ms");
+        Console.WriteLine($"Parallel mean and standard deviation:   {meanParallel:F2}, {stdDevParallel:F2}");
         Console.WriteLine($"Speedup:    {speedup:F2}x");
     }
 }

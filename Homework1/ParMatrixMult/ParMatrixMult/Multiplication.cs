@@ -5,6 +5,7 @@
 namespace ParMatrixMult;
 
 using System.Diagnostics;
+using System.Net.NetworkInformation;
 
 /// <summary>
 /// Class with multiplication functions.
@@ -36,7 +37,7 @@ public class Multiplication
     /// <param name="maxThread">The max number of parallel threads.</param>
     /// <returns>Matrix of multiplication.</returns>
     /// <exception cref="ArgumentException">If matrices` sizes doesn`t match.</exception>
-    public Matrix ParallelMult(Matrix first, Matrix second, int maxThread)
+    public Matrix ParallelMultiply(Matrix first, Matrix second, int maxThread)
     {
         if (!this.CompareMatrixDim(first, second))
         {
@@ -81,7 +82,7 @@ public class Multiplication
     /// <param name="second">The second matrix.</param>
     /// <returns>Matrix of multiplication.</returns>
     /// <exception cref="ArgumentException">If matrices` sizes doesn`t match.</exception>
-    public Matrix SequentialMult(Matrix first, Matrix second)
+    public Matrix SequentialMultiply(Matrix first, Matrix second)
     {
         if (!this.CompareMatrixDim(first, second))
         {
@@ -132,21 +133,57 @@ public class Multiplication
     /// </summary>
     /// <param name="operation">A pointer to the function that needs to be measured.</param>
     /// <param name="runs">The number of launches from which we take the average value.</param>
-    /// <returns>The total time of operation.</returns>
-    public double PerformanceMeasurement(Func<Matrix> operation, int runs)
+    /// <returns>The average arithmetic execution time for all runs, mean and standard deviation.</returns>
+    public (double AverageArithmetic, double Mean, double StdDev) PerformanceMeasurement(Func<Matrix> operation, int runs)
     {
+        var measurements = new List<double>();
         operation();
-        double totalTime = 0;
         var stopwatch = new Stopwatch();
         for (int i = 0; i < runs; ++i)
         {
             stopwatch.Restart();
             operation();
             stopwatch.Stop();
-            totalTime += stopwatch.Elapsed.TotalMilliseconds;
+            measurements.Add(stopwatch.Elapsed.TotalMilliseconds);
         }
 
-        return totalTime / runs;
+        var (mean, stdDev) = this.CalculateMeasurements(measurements);
+
+        return (measurements.Sum() / runs, mean, stdDev);
+    }
+
+    /// <summary>
+    /// Calculate the mean and standard deviation.
+    /// </summary>
+    /// <param name="measurements">The list of time stamps.</param>
+    /// <returns>Mean and standard deviation.</returns>
+    public (double Mean, double StdDev) CalculateMeasurements(List<double> measurements)
+    {
+        double mean = this.CalculateMean(measurements);
+        double stdDev = this.CalculateStandardDeviation(measurements);
+        return (mean, stdDev);
+    }
+
+    private double CalculateMean(List<double> values)
+    {
+        if (values == null || values.Count() == 0)
+        {
+            throw new ArgumentException();
+        }
+
+        return values.Average();
+    }
+
+    private double CalculateStandardDeviation(List<double> values)
+    {
+        if (values == null || values.Count() < 2)
+        {
+            throw new ArgumentException();
+        }
+
+        var mean = this.CalculateMean(values);
+        var sumOfSquaresOfDeviation = values.Select(x => Math.Pow(x - mean, 2)).Sum();
+        return Math.Sqrt(sumOfSquaresOfDeviation / values.Count());
     }
 
     private void MultiplyRow(Matrix first, Matrix second, Matrix result, int index)

@@ -1,5 +1,5 @@
 Performance testing results: 
-Dimensions	Sequential(ms)	Parallel(ms)	Speedup
-[100x100] * [100x100]	24,23	78,31	0,31x
-[500x500] * [500x500]	1771,22	779,89	2,27x
-[1000x1000] * [1000x1000]	17302,01	4992,61	3,47x
+Dimensions            	Sequential(ms)	Parallel(ms)	Speedup	Mean Sequential	Std Dev Sequential	Mean Parallel	Std Dev Parallel	
+[100x100] * [100x100         ]	       26,19	       47,54	    0,55x	   26,19	    4,84	   47,54	    2,15
+[500x500] * [500x500         ]	     1858,02	      666,65	    2,79x	 1858,02	  220,12	  666,65	   68,49
+[1000x1000] * [1000x1000        ]	    16403,66	     4502,17	    3,64x	16403,66	  273,59	 4502,17	  125,65
