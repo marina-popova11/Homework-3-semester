@@ -12,6 +12,10 @@ public class MultiThreadLazy<T> : ILazy<T>
     private T value;
     private bool isValueCreated;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MultiThreadLazy{T}"/> class.
+    /// </summary>
+    /// <param name="supplier">The supplier of function.</param>
     public MultiThreadLazy(Func<T> supplier)
     {
         this.supplier = supplier;
@@ -24,6 +28,16 @@ public class MultiThreadLazy<T> : ILazy<T>
     /// <exception cref="NotImplementedException"></exception>
     public T Get()
     {
-        throw new NotImplementedException();
+        if (this.isValueCreated)
+        {
+            return this.value;
+        }
+
+        this.InitializeValue();
+    }
+
+    private T InitializeValue()
+    {
+
     }
 }
