@@ -22,30 +22,28 @@ static void MultiplyTwoMatrices(string file1, string file2, string outputFile)
 {
     try
     {
-        var firstMatrix = new Matrix();
-        firstMatrix.GetMatrixFromFile(file1);
+        var firstMatrix = Matrix.GetMatrixFromFile(file1);
 
-        var secondMatrix = new Matrix();
-        secondMatrix.GetMatrixFromFile(file2);
+        var secondMatrix = Matrix.GetMatrixFromFile(file2);
 
         var result = new Multiplication();
         if (!result.CompareMatrixDim(firstMatrix, secondMatrix))
         {
             throw new InvalidOperationException(
                 $"Matrices are incompatible for multiplication: " +
-                $"Matrix1 [{firstMatrix.GetRows()}x{firstMatrix.GetColumns()}] and " +
-                $"Matrix2 [{secondMatrix.GetRows()}x{secondMatrix.GetColumns()}]");
+                $"Matrix1 [{firstMatrix.Rows}x{firstMatrix.Columns}] and " +
+                $"Matrix2 [{secondMatrix.Rows}x{secondMatrix.Columns}]");
         }
 
         Console.WriteLine("Sequential matrix multiplication: ");
         Matrix sequentialMatrix = result.SequentialMultiply(firstMatrix, secondMatrix);
-        Console.WriteLine($"Result: Matrix [{sequentialMatrix.GetRows()}x{sequentialMatrix.GetColumns()}]");
+        Console.WriteLine($"Result: Matrix [{sequentialMatrix.Rows}x{sequentialMatrix.Columns}]");
 
         Console.WriteLine("Parallel matrix multiplication: ");
         Matrix parallelMatrix = result.ParallelMultiply(firstMatrix, secondMatrix, 4);
-        Console.WriteLine($"Result: Matrix [{parallelMatrix.GetRows()}x{parallelMatrix.GetColumns()}]");
+        Console.WriteLine($"Result: Matrix [{parallelMatrix.Rows}x{parallelMatrix.Columns}]");
 
-        if ((sequentialMatrix.GetRows() == parallelMatrix.GetRows()) && (sequentialMatrix.GetColumns() == parallelMatrix.GetColumns()))
+        if ((sequentialMatrix.Rows == parallelMatrix.Rows) && (sequentialMatrix.Columns == parallelMatrix.Columns))
         {
             parallelMatrix.PutMatrixToFile(outputFile);
         }

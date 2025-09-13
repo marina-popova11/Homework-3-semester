@@ -5,7 +5,6 @@
 namespace ParMatrixMult;
 
 using System.Diagnostics;
-using System.Net.NetworkInformation;
 
 /// <summary>
 /// Class with multiplication functions.
@@ -18,12 +17,11 @@ public class Multiplication
     /// <param name="first">The first matrix.</param>
     /// <param name="second">The second matrix.</param>
     /// <returns>True if their dimensions match, False otherwise.</returns>
-    /// <exception cref="ArgumentException">If matrices` sizes doesn`t match.</exception>
     public bool CompareMatrixDim(Matrix first, Matrix second)
     {
-        if (first.GetColumns() != second.GetRows())
+        if (first.Columns != second.Rows)
         {
-            throw new ArgumentException();
+            return false;
         }
 
         return true;
@@ -44,10 +42,10 @@ public class Multiplication
             throw new ArgumentException();
         }
 
-        var newMatrix = new Matrix(first.GetRows(), second.GetColumns());
+        var newMatrix = new Matrix(first.Rows, second.Columns);
         var semaphore = new SemaphoreSlim(maxThread, maxThread);
         var threads = new List<Thread>();
-        for (int i = 0; i < first.GetRows(); ++i)
+        for (int i = 0; i < first.Rows; ++i)
         {
             int currentIndex = i;
             var thread = new Thread(() =>
@@ -89,18 +87,18 @@ public class Multiplication
             throw new ArgumentException();
         }
 
-        var newMatrix = new Matrix(first.GetRows(), second.GetColumns());
-        for (int i = 0; i < first.GetRows(); ++i)
+        var newMatrix = new Matrix(first.Rows, second.Columns);
+        for (int i = 0; i < first.Rows; ++i)
         {
-            for (int j = 0; j < second.GetColumns(); ++j)
+            for (int j = 0; j < second.Columns; ++j)
             {
                 int sum = 0;
-                for (int k = 0; k < first.GetColumns(); ++k)
+                for (int k = 0; k < first.Columns; ++k)
                 {
-                    sum += first.GetMatrix()[i, k] * second.GetMatrix()[k, j];
+                    sum += first[i, k] * second[k, j];
                 }
 
-                newMatrix.SetMatrix(i, j, sum);
+                newMatrix[i, j] = sum;
             }
         }
 
@@ -115,13 +113,12 @@ public class Multiplication
     /// <returns>random matrix.</returns>
     public Matrix CreateRandomMatrix(int rows, int columns)
     {
-        var rand = new Random();
         var newMatrix = new Matrix(rows, columns);
-        for (int i = 0; i < newMatrix.GetRows(); ++i)
+        for (int i = 0; i < newMatrix.Rows; ++i)
         {
-            for (int j = 0; j < newMatrix.GetColumns(); ++j)
+            for (int j = 0; j < newMatrix.Columns; ++j)
             {
-                newMatrix.SetMatrix(i, j, rand.Next(1, 20));
+                newMatrix[i, j] = Random.Shared.Next(1, 20);
             }
         }
 
@@ -168,7 +165,7 @@ public class Multiplication
     {
         if (values == null || values.Count() == 0)
         {
-            throw new ArgumentException();
+            throw new ArgumentException(nameof(values));
         }
 
         return values.Average();
@@ -178,7 +175,7 @@ public class Multiplication
     {
         if (values == null || values.Count() < 2)
         {
-            throw new ArgumentException();
+            throw new ArgumentException(nameof(values));
         }
 
         var mean = this.CalculateMean(values);
@@ -188,15 +185,15 @@ public class Multiplication
 
     private void MultiplyRow(Matrix first, Matrix second, Matrix result, int index)
     {
-        for (int i = 0; i < second.GetColumns(); ++i)
+        for (int i = 0; i < second.Columns; ++i)
         {
             int sum = 0;
-            for (int k = 0; k < first.GetColumns(); ++k)
+            for (int k = 0; k < first.Columns; ++k)
             {
-                sum += first.GetMatrix()[index, k] * second.GetMatrix()[k, i];
+                sum += first[index, k] * second[k, i];
             }
 
-            result.SetMatrix(index, i, sum);
+            result[index, i] = sum;
         }
 
         System.Console.WriteLine($"Thread {Thread.CurrentThread.ManagedThreadId} finished the row number {index + 1}!");

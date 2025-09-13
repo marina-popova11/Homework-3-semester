@@ -30,6 +30,58 @@ public class Matrix
     /// </summary>
     public Matrix()
     {
+        this.matrix = new int[0, 0];
+        this.rows = this.matrix.GetLength(0);
+        this.columns = this.matrix.GetLength(1);
+    }
+
+    /// <summary>
+    /// Gets matrix`s rows.
+    /// </summary>
+    public int Rows => this.rows;
+
+    /// <summary>
+    /// Gets matrix`s columns.
+    /// </summary>
+    public int Columns => this.columns;
+
+    /// <summary>
+    /// The index property.
+    /// </summary>
+    /// <param name="row">The required row.</param>
+    /// <param name="column">The required column.</param>
+    /// <returns>The value from the desired row and column.</returns>
+    public int this[int row, int column]
+    {
+        get
+        {
+            if (row < 0 || row >= this.rows)
+            {
+                throw new IndexOutOfRangeException($"Row index {row} is out of range [0, {this.rows - 1}]");
+            }
+
+            if (column < 0 || column >= this.columns)
+            {
+                throw new IndexOutOfRangeException($"Column index {column} is out of range [0, {this.columns - 1}]");
+            }
+
+            return this.matrix[row, column];
+        }
+
+        set
+        {
+            if (row < 0 || row >= this.rows)
+            {
+                throw new IndexOutOfRangeException($"Row index {row} is out of range [0, {this.rows - 1}]");
+            }
+
+            if (column < 0 || column >= this.columns)
+            {
+                throw new IndexOutOfRangeException($"Column index {column} is out of range [0, {this.columns - 1}]");
+            }
+
+            this.matrix[row, column] = value;
+        }
     }
 
     /// <summary>
@@ -38,11 +90,12 @@ public class Matrix
     /// <param name="filename">Name of file.</param>
     /// <exception cref="ArgumentException">If filename does not include characters.</exception>
     /// <exception cref="FileNotFoundException">If file doesn`t exist.</exception>
-    public void GetMatrixFromFile(string filename)
+    /// <returns>Matrix.</returns>
+    public static Matrix GetMatrixFromFile(string filename)
     {
         if (string.IsNullOrEmpty(filename))
         {
-            throw new ArgumentException();
+            throw new ArgumentException(nameof(filename));
         }
 
         if (!File.Exists(filename))
@@ -51,18 +104,20 @@ public class Matrix
         }
 
         string[] lines = File.ReadAllLines(filename);
-        this.rows = lines.Length;
-        this.columns = lines[0].Split(",", StringSplitOptions.RemoveEmptyEntries).Length;
-        this.matrix = new int[this.rows, this.columns];
-        for (int i = 0; i < this.rows; ++i)
+        var rows = lines.Length;
+        var columns = lines[0].Split(",", StringSplitOptions.RemoveEmptyEntries).Length;
+        var matrix = new Matrix(rows, columns);
+        for (int i = 0; i < rows; ++i)
         {
-            string cleared = lines[i].Replace("(", "").Replace(")", "").Trim();
+            string cleared = lines[i].Replace("(", string.Empty).Replace(")", string.Empty).Trim();
             string[] numbers = cleared.Split(",", StringSplitOptions.RemoveEmptyEntries);
-            for (int j = 0; j < this.columns; ++j)
+            for (int j = 0; j < columns; ++j)
             {
-                this.matrix[i, j] = int.Parse(numbers[j].Trim());
+                matrix[i, j] = int.Parse(numbers[j].Trim());
             }
         }
+
+        return matrix;
     }
 
     /// <summary>
@@ -96,40 +151,64 @@ public class Matrix
     }
 
     /// <summary>
-    /// Get int matrix.
-    /// </summary>
-    /// <returns>Two-dimensional array.</returns>
-    public int[,] GetMatrix() => this.matrix;
-
-    /// <summary>
-    /// Changes the value in the cell.
-    /// </summary>
-    /// <param name="first">First coordinate.</param>
-    /// <param name="second">Second coordinate..</param>
-    /// <param name="value">New value.</param>
-    public void SetMatrix(int first, int second, int value) => this.matrix[first, second] = value;
-
-    /// <summary>
-    /// Get matrix`s rows.
-    /// </summary>
-    /// <returns>Rows.</returns>
-    public int GetRows() => this.rows;
-
-    /// <summary>
-    /// Get matrix`s columns.
-    /// </summary>
-    /// <returns>Columns.</returns>
-    public int GetColumns() => this.columns;
-
-    /// <summary>
     /// Changes the value of rows.
     /// </summary>
     /// <param name="value">New number of rows.</param>
-    public void SetRows(int value) => this.rows = value;
+    public void SetRows(int value)
+    {
+        if (value < 0)
+        {
+            throw new InvalidDataException(nameof(value));
+        }
+
+        if (value == this.rows)
+        {
+            return;
+        }
+
+        var newMatrix = new int[value, this.columns];
+        var newRows = Math.Min(value, this.rows);
+
+        for (int i = 0; i < newRows; ++i)
+        {
+            for (int j = 0; j < this.columns; ++j)
+            {
+                newMatrix[i, j] = this.matrix[i, j];
+            }
+        }
+
+        this.matrix = newMatrix;
+        this.rows = value;
+    }
 
     /// <summary>
     /// Changes the value of columns.
     /// </summary>
     /// <param name="value">New number of columns.</param>
-    public void SetColumns(int value) => this.columns = value;
+    public void SetColumns(int value)
+    {
+        if (value < 0)
+        {
+            throw new InvalidDataException(nameof(value));
+        }
+
+        if (value == this.columns)
+        {
+            return;
+        }
+
+        var newMatrix = new int[this.rows, value];
+        var newColumns = Math.Min(value, this.rows);
+
+        for (int i = 0; i < this.rows; ++i)
+        {
+            for (int j = 0; j < newColumns; ++j)
+            {
+                newMatrix[i, j] = this.matrix[i, j];
+            }
+        }
+
+        this.matrix = newMatrix;
+        this.columns = value;
+    }
 }
