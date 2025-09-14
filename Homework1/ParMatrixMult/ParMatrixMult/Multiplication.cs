@@ -4,6 +4,7 @@
 
 namespace ParMatrixMult;
 
+using System.Collections.Concurrent;
 using System.Diagnostics;
 
 /// <summary>
@@ -43,33 +44,65 @@ public class Multiplication
         }
 
         var newMatrix = new Matrix(first.Rows, second.Columns);
-        var semaphore = new SemaphoreSlim(maxThread, maxThread);
+        var queue = new ConcurrentQueue<int>(); // We will put the row numbers that need to be calculated in this queue. Each thread will take the next available row from this queue
         var threads = new List<Thread>();
-        for (int i = 0; i < first.Rows; ++i)
+        var completed = new ManualResetEvent(false); // It will notify the main thread that all worker threads have completed their work
+        int activeThread = 0;
+        int processedCount = 0; // Total number of processed rows
+
+        for (int i = 0; i < first.Rows; ++i) // The queue contains the indices of all rows of the resulting matrix that need to be calculated
         {
-            int currentIndex = i;
-            var thread = new Thread(() =>
+            queue.Enqueue(i);
+        }
+
+        for (int i = 0; i < maxThread; ++i)
+        {
+            var thread = new Thread(() => // Once a thread has started and begun executing, it atomically increments the activeThread count by 1
             {
-                semaphore.Wait(); // Wait permissions from the semaphore before work, until at least one permitted thread is executed
-                try
+                Interlocked.Increment(ref activeThread); // Increasing the active thread counter
+                while (queue.TryDequeue(out int rowIndex))
                 {
-                    this.MultiplyRow(first, second, newMatrix, currentIndex);
+                    this.MultiplyRow(first, second, newMatrix, rowIndex);
+                    Interlocked.Increment(ref processedCount); // Atomic increase of the processed rows counter
                 }
-                finally
+
+                if (Interlocked.Decrement(ref activeThread) == 0)
                 {
-                    semaphore.Release();
+                    completed.Set();
                 }
             });
 
             threads.Add(thread);
-            thread.Start(); // Here thread start his work which i specified it in line 28
+            thread.Start();
         }
 
-        foreach (var thread in threads)
-        {
-            thread.Join();
-        }
+        completed.WaitOne();
 
+        // var semaphore = new SemaphoreSlim(maxThread, maxThread);
+        // var threads = new List<Thread>();
+        // for (int i = 0; i < first.Rows; ++i)
+        // {
+        //     int currentIndex = i;
+        //     var thread = new Thread(() =>
+        //     {
+        //         semaphore.Wait(); // Wait permissions from the semaphore before work, until at least one permitted thread is executed
+        //         try
+        //         {
+        //             this.MultiplyRow(first, second, newMatrix, currentIndex);
+        //         }
+        //         finally
+        //         {
+        //             semaphore.Release();
+        //         }
+        //     });
+        //     threads.Add(thread);
+        //     thread.Start(); // Here thread start his work which i specified it in line 28
+        // }
+
+        // foreach (var thread in threads)
+        // {
+        //     thread.Join();
+        // }
         return newMatrix;
     }
 
