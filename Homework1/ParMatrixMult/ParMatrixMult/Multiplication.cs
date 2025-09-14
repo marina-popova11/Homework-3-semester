@@ -78,31 +78,6 @@ public class Multiplication
 
         completed.WaitOne();
 
-        // var semaphore = new SemaphoreSlim(maxThread, maxThread);
-        // var threads = new List<Thread>();
-        // for (int i = 0; i < first.Rows; ++i)
-        // {
-        //     int currentIndex = i;
-        //     var thread = new Thread(() =>
-        //     {
-        //         semaphore.Wait(); // Wait permissions from the semaphore before work, until at least one permitted thread is executed
-        //         try
-        //         {
-        //             this.MultiplyRow(first, second, newMatrix, currentIndex);
-        //         }
-        //         finally
-        //         {
-        //             semaphore.Release();
-        //         }
-        //     });
-        //     threads.Add(thread);
-        //     thread.Start(); // Here thread start his work which i specified it in line 28
-        // }
-
-        // foreach (var thread in threads)
-        // {
-        //     thread.Join();
-        // }
         return newMatrix;
     }
 
