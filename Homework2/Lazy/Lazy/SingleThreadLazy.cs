@@ -9,7 +9,7 @@
 public class SingleThreadLazy<T> : ILazy<T>
 {
     private Func<T> supplier;
-    private T value;
+    private T? value;
     private bool isValueCreated;
 
     /// <summary>
@@ -25,7 +25,7 @@ public class SingleThreadLazy<T> : ILazy<T>
     /// Returns the value of the element.
     /// </summary>
     /// <returns>The value of the element.</returns>
-    /// <exception cref="ArgumentException"></exception>
+    /// <exception cref="Exception">If the value won`t be calculating.</exception>
     public T Get()
     {
         if (!this.isValueCreated)
@@ -38,11 +38,11 @@ public class SingleThreadLazy<T> : ILazy<T>
             }
             catch (Exception ex)
             {
-                ex = new ArgumentException();
+                ex = new Exception();
                 throw;
             }
         }
 
-        return this.value;
+        return this.value!;
     }
 }

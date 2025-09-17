@@ -9,8 +9,10 @@
 public class MultiThreadLazy<T> : ILazy<T>
 {
     private Func<T> supplier;
-    private T value;
+    private T? value;
     private bool isValueCreated;
+    private object lockObject = new();
+    private volatile bool isComputing = false; // volatile ensures the visibility of changes between threads
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MultiThreadLazy{T}"/> class.
@@ -24,20 +26,37 @@ public class MultiThreadLazy<T> : ILazy<T>
     /// <summary>
     /// Returns the value of the element.
     /// </summary>
-    /// <returns></returns>
-    /// <exception cref="NotImplementedException"></exception>
+    /// <returns>the value.</returns>
     public T Get()
     {
         if (this.isValueCreated)
         {
-            return this.value;
+            return this.value!;
         }
 
-        this.InitializeValue();
-    }
+        lock (this.lockObject) // blocked access for one thread
+        {
+            if (!this.isValueCreated)
+            {
+                this.isComputing = true;
+                try
+                {
+                    this.value = this.supplier();
+                    this.isValueCreated = true;
+                    this.supplier = null!;
+                }
+                finally
+                {
+                    this.isComputing = false;
+                }
+            }
+        }
 
-    private T InitializeValue()
-    {
+        while (this.isComputing)
+        {
+            Thread.Yield();
+        }
 
+        return this.value!;
     }
 }
