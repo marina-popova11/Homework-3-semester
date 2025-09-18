@@ -12,14 +12,21 @@ public class MultiThreadLazy<T> : ILazy<T>
     private T? value;
     private bool isValueCreated;
     private object lockObject = new();
+    private Exception? exception;
     private volatile bool isComputing = false; // volatile ensures the visibility of changes between threads
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MultiThreadLazy{T}"/> class.
     /// </summary>
     /// <param name="supplier">The supplier of function.</param>
+    /// <exception cref="ArgumentNullException">If supplier is a null function.</exception>
     public MultiThreadLazy(Func<T> supplier)
     {
+        if (supplier == null)
+        {
+            throw new ArgumentNullException(nameof(supplier));
+        }
+
         this.supplier = supplier;
     }
 
@@ -34,23 +41,38 @@ public class MultiThreadLazy<T> : ILazy<T>
             return this.value!;
         }
 
-        lock (this.lockObject) // blocked access for one thread
+        if (this.exception != null)
         {
-            if (!this.isValueCreated)
+            throw this.exception;
+        }
+
+        lock (this.lockObject) // blocked access for one thread
             {
-                this.isComputing = true;
-                try
+                if (!this.isValueCreated)
                 {
-                    this.value = this.supplier();
-                    this.isValueCreated = true;
-                    this.supplier = null!;
-                }
-                finally
-                {
-                    this.isComputing = false;
+                    this.isComputing = true;
+                    if (this.exception != null)
+                    {
+                        throw this.exception;
+                    }
+
+                    try
+                    {
+                        this.value = this.supplier();
+                        this.isValueCreated = true;
+                        this.supplier = null!;
+                    }
+                    catch (Exception ex)
+                    {
+                        this.exception = ex;
+                        throw;
+                    }
+                    finally
+                    {
+                        this.isComputing = false;
+                    }
                 }
             }
-        }
 
         while (this.isComputing)
         {
