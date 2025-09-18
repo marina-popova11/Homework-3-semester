@@ -4,9 +4,26 @@
 
 namespace Lazy.Tests;
 
-public abstract class LazySingleTests
+[TestFixture]
+public class LazySingleTests : LazyCommonTests
 {
     [Test]
-    public void 
-    protected abstract ILazy<T> CreateLazy<T>(Func<T> supplier);
+    public void Test_GetForSingleThreadSupplierCallOnce()
+    {
+        var increasingSuppliersCall = 0;
+        var lazy = this.CreateLazy(() =>
+        {
+            ++increasingSuppliersCall;
+            return "Test";
+        });
+
+        for (int i = 0; i < 10; ++i)
+        {
+            lazy.Get();
+        }
+
+        Assert.That(increasingSuppliersCall, Is.EqualTo(1));
+    }
+
+    protected override ILazy<T> CreateLazy<T>(Func<T> supplier) => new SingleThreadLazy<T>(supplier);
 }

@@ -16,8 +16,14 @@ public class SingleThreadLazy<T> : ILazy<T>
     /// Initializes a new instance of the <see cref="SingleThreadLazy{T}"/> class.
     /// </summary>
     /// <param name="supplier">The supplier of function.</param>
+    /// <exception cref="ArgumentNullException">If supplier is a null function.</exception>
     public SingleThreadLazy(Func<T> supplier)
     {
+        if (supplier == null)
+        {
+            throw new ArgumentNullException(nameof(supplier));
+        }
+
         this.supplier = supplier;
     }
 
