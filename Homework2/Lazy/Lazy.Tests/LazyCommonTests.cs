@@ -23,7 +23,7 @@ public abstract class LazyCommonTests
     }
 
     [Test]
-    public void Test_getReturnNull()
+    public void Test_GetReturnNull()
     {
         var lazy = this.CreateLazy<string>(() => null!);
         Assert.That(lazy.Get(), Is.Null);
