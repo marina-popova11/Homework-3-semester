@@ -4,6 +4,8 @@
 
 namespace MyThreadPool;
 
+using System.Collections.Concurrent;
+
 /// <summary>
 /// Class for thread pool.
 /// </summary>
@@ -12,9 +14,10 @@ public class MyThreadPool<TResult>
 {
     private readonly Thread[] threads;
     private readonly object lockObject = new object();
-    private Queue<Action> taskQueue = new();
+    private readonly CancellationTokenSource cts;
+    private ConcurrentQueue<Action> taskQueue;
     private int numberThreads;
-    private bool expectation;
+    private int activeThreads;
     private volatile bool isShutDown = false;
 
     /// <summary>
@@ -31,8 +34,15 @@ public class MyThreadPool<TResult>
 
         this.threads = new Thread[this.numberThreads];
         this.numberThreads = numberThreads;
+        this.cts = new();
+        this.taskQueue = new();
+        this.activeThreads = 0;
 
-        this.expectation = true;
+        for (int i = 0; i < numberThreads; ++i)
+        {
+            this.threads[i] = new Thread(() => this.Run());
+            this.threads[i].Start();
+        }
     }
 
     /// <summary>
@@ -63,5 +73,31 @@ public class MyThreadPool<TResult>
         }
 
         this.taskQueue.Enqueue(task);
+    }
+
+    private void Run()
+    {
+        if (!this.cts.IsCancellationRequested)
+        {
+            try
+            {
+                if (this.taskQueue.TryDequeue(out var taskRun))
+                {
+                    Interlocked.Increment(ref this.activeThreads);
+                    try
+                    {
+                        taskRun();
+                    }
+                    finally
+                    {
+                        Interlocked.Decrement(ref this.activeThreads);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Task failed: {ex.Message}");
+            }
+        }
     }
 }

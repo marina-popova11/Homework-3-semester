@@ -18,43 +18,46 @@ internal class MyTask<TResult> : IMyTask<TResult>
     /// Initializes a new instance of the <see cref="MyTask{TResults}"/> class.
     /// </summary>
     /// <param name="function">The function given for calculating.</param>
-    public MyTask(Func<TResult> function)
+    /// <param name="threadPool">The thread pool.</param>
+    public MyTask(Func<TResult> function, MyThreadPool<TResult> threadPool)
     {
         this.function = function;
+        this.threadPool = threadPool;
     }
 
-    TResult IMyTask<TResult>.Result => throw new NotImplementedException();
-
     /// <summary>
-    /// Returns true if the task is completed.
+    /// Gets a value indicating whether. Returns true if the task is completed.
     /// </summary>
     /// <returns>True or false.</returns>
-    public bool IsCompleted() => this.isCompleted;
+    public bool IsCompleted => this.isCompleted;
 
     /// <summary>
-    /// Returns the result of the task execution.
+    /// Gets the result of the task execution.
     /// </summary>
     /// <returns>The result of the task execution.</returns>
     /// <exception cref="AggregateException">If the function corresponding to the task has terminated with an exception.</exception>
-    public TResult Result()
+    public TResult Result
     {
-        if (!this.isCompleted)
+        get
         {
-            lock (this.lockObject)
+            if (!this.isCompleted)
             {
-                while (!this.isCompleted)
+                lock (this.lockObject)
                 {
-                    Monitor.Wait(this.lockObject);
+                    while (!this.isCompleted)
+                    {
+                        Monitor.Wait(this.lockObject);
+                    }
                 }
             }
-        }
 
-        if (this.exception != null)
-        {
-            throw new AggregateException("Task failed", this.exception);
-        }
+            if (this.exception != null)
+            {
+                throw new AggregateException("Task failed", this.exception);
+            }
 
-        return this.result;
+            return this.result;
+        }
     }
 
     /// <summary>
@@ -66,16 +69,21 @@ internal class MyTask<TResult> : IMyTask<TResult>
     /// <returns>Element that can itself become a new task.</returns>
     public IMyTask<TResult> ContinueWith(Func<TResult, TResult> nextFunction)
     {
-        var nextTask = new MyTask<TResult>(() => nextFunction(Result), this.threadPool);
+        if (nextFunction == null)
+        {
+            throw new ArgumentNullException(nameof(nextFunction));
+        }
+
+        var nextTask = new MyTask<TResult>(() => nextFunction(this.Result), this.threadPool);
         lock (this.lockObject)
         {
             if (!this.isCompleted)
             {
-                this.followingTasks.Add(nextTask.Execute());
+                this.followingTasks.Add(() => nextTask.Execute());
             }
             else
             {
-                this.threadPool.Enqueue(() => nextTask.Execute);
+                this.threadPool.Enqueue(() => nextTask.Execute());
             }
         }
 
@@ -116,10 +124,5 @@ internal class MyTask<TResult> : IMyTask<TResult>
                 Monitor.PulseAll(this.lockObject);
             }
         }
-    }
-
-    public IMyTask<TNewResult> ContinueWith(Func<TResult, TNewResult> func)
-    {
-        throw new NotImplementedException();
     }
 }
