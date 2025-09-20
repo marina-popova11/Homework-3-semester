@@ -4,6 +4,10 @@
 
 namespace MyThreadPool;
 
+/// <summary>
+/// Class for interface My Task.
+/// </summary>
+/// <typeparam name="TResult">The type of data.</typeparam>
 public interface IMyTask<TResult>
 {
     /// <summary>
@@ -17,10 +21,11 @@ public interface IMyTask<TResult>
     TResult Result { get; }
 
     /// <summary>
-    /// 
+    /// Returns an element that can itself become a new task.
     /// </summary>
-    /// <param name="func"></param>
-    /// <returns></returns>
-    IMyTask<TNewResult> ContinueWith(Func<TResult, TNewResult> func);
-
+    /// <param name="func">An object of type Func that can be applied
+    /// to the result of a given task X and returns a new task Y that has been
+    /// accepted for execution.</param>
+    /// <returns>Element that can itself become a new task.</returns>
+    IMyTask<TResult> ContinueWith(Func<TResult, TResult> func);
 }

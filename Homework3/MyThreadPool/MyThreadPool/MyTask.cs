@@ -8,13 +8,11 @@ internal class MyTask<TResult> : IMyTask<TResult>
 {
     private readonly object lockObject = new object();
     private readonly Func<TResult> function;
-    private TResult result;
+    private TResult result = default!;
     private volatile bool isCompleted = false;
-    private Exception exception;
+    private Exception exception = null!;
     private MyThreadPool<TResult> threadPool;
-    private List<Action> followingTasks;
-
-    TResult IMyTask<TResult>.Result => throw new NotImplementedException();
+    private List<Action> followingTasks = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MyTask{TResults}"/> class.
@@ -24,6 +22,8 @@ internal class MyTask<TResult> : IMyTask<TResult>
     {
         this.function = function;
     }
+
+    TResult IMyTask<TResult>.Result => throw new NotImplementedException();
 
     /// <summary>
     /// Returns true if the task is completed.
@@ -60,9 +60,10 @@ internal class MyTask<TResult> : IMyTask<TResult>
     /// <summary>
     /// Returns an element that can itself become a new task.
     /// </summary>
-    /// <param name="nextFunction">An object of type Func<TResult, TResult>
-    /// that can be applied to the result of a given task X and returns a new task Y that has been accepted for execution.</param>
-    /// <returns></returns>
+    /// <param name="nextFunction">An object of type Func that can be applied
+    /// to the result of a given task X and returns a new task Y that has been
+    /// accepted for execution.</param>
+    /// <returns>Element that can itself become a new task.</returns>
     public IMyTask<TResult> ContinueWith(Func<TResult, TResult> nextFunction)
     {
         var nextTask = new MyTask<TResult>(() => nextFunction(Result), this.threadPool);
