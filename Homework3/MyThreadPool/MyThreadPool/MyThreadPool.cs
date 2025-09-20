@@ -2,30 +2,29 @@
 // Marina Popova, 2025, under MIT License.
 // </copyright>
 
+namespace MyThreadPool;
+
 public class MyThreadPool<TResult>
 {
     private int numberThreads;
-    public Func<TResult> Task = new();
-    public bool Expectation;
+    private Queue<Thread> threads;
+    private bool expectation;
 
     public MyThreadPool(int numberThreads)
     {
         this.numberThreads = numberThreads;
-        this.Expectation = true;
+        this.expectation = true;
     }
 
     public void ShutDown()
     {
     }
 
-    // private class SelfThread<TResult>
-    // {
-    //     public Func<TResult> Task = new();
-    //     public bool expectation;
-
-    //     public SelfThread()
-    //     {
-    //         this.expectation = true;
-    //     }
-    // }
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="func"></param>
+    public void Enqueue(Func<TResult> func)
+    {
+    }
 }

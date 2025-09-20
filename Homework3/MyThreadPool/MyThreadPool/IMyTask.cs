@@ -2,6 +2,8 @@
 // Marina Popova, 2025, under MIT License.
 // </copyright>
 
+namespace MyThreadPool;
+
 public interface IMyTask<TResult>
 {
     /// <summary>

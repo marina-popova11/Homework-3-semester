@@ -2,14 +2,24 @@
 // Marina Popova, 2025, under MIT License.
 // </copyright>
 
-public class MyTask<TResult> : IMyTask<TResult>
+namespace MyThreadPool;
+
+internal class MyTask<TResult> : IMyTask<TResult>
 {
     private readonly object lockObject = new object();
     private readonly Func<TResult> function;
     private TResult result;
     private volatile bool isCompleted = false;
     private Exception exception;
+    private MyThreadPool<TResult> threadPool;
+    private List<Action> followingTasks;
 
+    TResult IMyTask<TResult>.Result => throw new NotImplementedException();
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MyTask{TResults}"/> class.
+    /// </summary>
+    /// <param name="function">The function given for calculating.</param>
     public MyTask(Func<TResult> function)
     {
         this.function = function;
@@ -45,6 +55,66 @@ public class MyTask<TResult> : IMyTask<TResult>
         }
 
         return this.result;
+    }
+
+    /// <summary>
+    /// Returns an element that can itself become a new task.
+    /// </summary>
+    /// <param name="nextFunction">An object of type Func<TResult, TResult>
+    /// that can be applied to the result of a given task X and returns a new task Y that has been accepted for execution.</param>
+    /// <returns></returns>
+    public IMyTask<TResult> ContinueWith(Func<TResult, TResult> nextFunction)
+    {
+        var nextTask = new MyTask<TResult>(() => nextFunction(Result), this.threadPool);
+        lock (this.lockObject)
+        {
+            if (!this.isCompleted)
+            {
+                this.followingTasks.Add(nextTask.Execute());
+            }
+            else
+            {
+                this.threadPool.Enqueue(() => nextTask.Execute);
+            }
+        }
+
+        return nextTask;
+    }
+
+    /// <summary>
+    /// Performs the task.
+    /// </summary>
+    private void Execute()
+    {
+        try
+        {
+            this.result = this.function();
+        }
+        catch (Exception ex)
+        {
+            this.exception = ex;
+        }
+        finally
+        {
+            lock (this.lockObject)
+            {
+                this.isCompleted = true;
+                foreach (var task in this.followingTasks)
+                {
+                    try
+                    {
+                        this.threadPool.Enqueue(task);
+                    }
+                    catch (InvalidOperationException)
+                    {
+                    }
+                }
+
+                this.followingTasks.Clear();
+
+                Monitor.PulseAll(this.lockObject);
+            }
+        }
     }
 
     public IMyTask<TNewResult> ContinueWith(Func<TResult, TNewResult> func)
