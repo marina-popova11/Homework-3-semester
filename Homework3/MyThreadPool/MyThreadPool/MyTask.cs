@@ -11,7 +11,7 @@ internal class MyTask<TResult> : IMyTask<TResult>
     private TResult result = default!;
     private volatile bool isCompleted = false;
     private Exception exception = null!;
-    private MyThreadPool<TResult> threadPool;
+    private MyyThreadPool threadPool;
     private List<Action> followingTasks = new();
 
     /// <summary>
@@ -19,8 +19,13 @@ internal class MyTask<TResult> : IMyTask<TResult>
     /// </summary>
     /// <param name="function">The function given for calculating.</param>
     /// <param name="threadPool">The thread pool.</param>
-    public MyTask(Func<TResult> function, MyThreadPool<TResult> threadPool)
+    public MyTask(Func<TResult> function, MyyThreadPool threadPool)
     {
+        if (function == null || threadPool == null)
+        {
+            throw new ArgumentNullException(nameof(function));
+        }
+
         this.function = function;
         this.threadPool = threadPool;
     }
@@ -67,33 +72,41 @@ internal class MyTask<TResult> : IMyTask<TResult>
     /// to the result of a given task X and returns a new task Y that has been
     /// accepted for execution.</param>
     /// <returns>Element that can itself become a new task.</returns>
-    public IMyTask<TResult> ContinueWith(Func<TResult, TResult> nextFunction)
+    /// <exception cref="InvalidOperationException">If thread pool is shut down.</exception>
+    public IMyTask<TNewResult> ContinueWith<TNewResult>(Func<TResult, TNewResult> nextFunction)
     {
         if (nextFunction == null)
         {
             throw new ArgumentNullException(nameof(nextFunction));
         }
 
-        var nextTask = new MyTask<TResult>(() => nextFunction(this.Result), this.threadPool);
-        lock (this.lockObject)
+        if (this.threadPool.IsShitDown())
         {
-            if (!this.isCompleted)
-            {
-                this.followingTasks.Add(() => nextTask.Execute());
-            }
-            else
-            {
-                this.threadPool.Enqueue(() => nextTask.Execute());
-            }
+            throw new InvalidOperationException("Thread pool is shut down.");
         }
 
-        return nextTask;
+        return this.threadPool.CreatingQueuingTask(() => nextFunction(this.Result));
+
+        // var nextTask = new MyTask<TNewResult>(() => nextFunction(this.result), this.threadPool);
+        // lock (this.lockObject)
+        // {
+        //     if (!this.isCompleted)
+        //     {
+        //         this.followingTasks.Add(() => nextTask.Run());
+        //     }
+        //     else
+        //     {
+        //         this.threadPool.CreatingQueuingTask(() => nextTask.Run());
+        //     }
+        // }
+
+        // return nextTask;
     }
 
     /// <summary>
     /// Performs the task.
     /// </summary>
-    private void Execute()
+    public void Run()
     {
         try
         {
@@ -110,13 +123,7 @@ internal class MyTask<TResult> : IMyTask<TResult>
                 this.isCompleted = true;
                 foreach (var task in this.followingTasks)
                 {
-                    try
-                    {
-                        this.threadPool.Enqueue(task);
-                    }
-                    catch (InvalidOperationException)
-                    {
-                    }
+                    this.threadPool.EnqueueTask(task);
                 }
 
                 this.followingTasks.Clear();
