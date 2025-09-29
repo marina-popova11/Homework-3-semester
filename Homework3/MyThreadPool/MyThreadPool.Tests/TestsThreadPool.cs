@@ -46,6 +46,7 @@ public class TestsThreadPool
     public void Test_IsCompleted()
     {
         var task = this.threadPool.Submit<int>(() => 2 * 3);
+        var result = task.Result;
         Assert.That(task.IsCompleted, Is.True);
     }
 
