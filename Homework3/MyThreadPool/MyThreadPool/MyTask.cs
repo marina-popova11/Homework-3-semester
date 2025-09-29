@@ -85,22 +85,7 @@ internal class MyTask<TResult> : IMyTask<TResult>
             throw new InvalidOperationException("Thread pool is shut down.");
         }
 
-        return this.threadPool.CreatingQueuingTask(() => nextFunction(this.Result));
-
-        // var nextTask = new MyTask<TNewResult>(() => nextFunction(this.result), this.threadPool);
-        // lock (this.lockObject)
-        // {
-        //     if (!this.isCompleted)
-        //     {
-        //         this.followingTasks.Add(() => nextTask.Run());
-        //     }
-        //     else
-        //     {
-        //         this.threadPool.CreatingQueuingTask(() => nextTask.Run());
-        //     }
-        // }
-
-        // return nextTask;
+        return this.threadPool.Submit(() => nextFunction(this.Result));
     }
 
     /// <summary>

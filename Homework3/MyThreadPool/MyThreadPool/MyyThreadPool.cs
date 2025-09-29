@@ -33,7 +33,7 @@ public class MyyThreadPool : IDisposable
             throw new ArgumentNullException(nameof(numberThreads));
         }
 
-        this.threads = new Thread[this.numberThreads];
+        this.threads = new Thread[numberThreads];
         this.numberThreads = numberThreads;
         this.cts = new();
         this.taskQueue = new();
@@ -84,7 +84,7 @@ public class MyyThreadPool : IDisposable
     /// <returns>Current task.</returns>
     /// <exception cref="InvalidOperationException">If thread pool is shut down.</exception>
     /// <exception cref="ArgumentNullException">If function is null.</exception>
-    public IMyTask<TResult> CreatingQueuingTask<TResult>(Func<TResult> function)
+    public IMyTask<TResult> Submit<TResult>(Func<TResult> function)
     {
         if (function == null)
         {
