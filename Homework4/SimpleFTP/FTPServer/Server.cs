@@ -13,9 +13,7 @@ using System.Threading.Tasks;
 /// </summary>
 public class Server
 {
-    private byte[] buffer;
     private TcpListener listener;
-    private string url;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Server"/> class.
@@ -28,6 +26,10 @@ public class Server
         this.listener.Start();
     }
 
+    /// <summary>
+    /// Starts the server operation.
+    /// </summary>
+    /// <returns>Completed task.</returns>
     public Task Run()
     {
         while (true)
@@ -41,7 +43,7 @@ public class Server
     /// Handles client requests.
     /// </summary>
     /// <param name="client">Tcp client.</param>
-    /// <returns></returns>
+    /// <returns>Completed task.</returns>
     public async Task HandleClient(TcpClient client)
     {
         using (client)
@@ -74,6 +76,7 @@ public class Server
     /// </summary>
     /// <param name="request">The request from client.</param>
     /// <param name="client">Tcp client.</param>
+    /// <param name="writer">the writer to record the results.</param>
     /// <returns>completed task.</returns>
     public async Task ProcessRequest(string request, TcpClient client, StreamWriter writer)
     {
@@ -104,6 +107,28 @@ public class Server
     /// <returns>completed task.</returns>
     public async Task HandlerGet(string path, TcpClient client, StreamWriter writer)
     {
+        try
+        {
+            if (!Directory.Exists(path))
+            {
+                await writer.WriteAsync("-1");
+                return;
+            }
+
+            var fileInfo = new FileInfo(path);
+            var size = fileInfo.Length.ToString();
+            await writer.WriteLineAsync(size);
+
+            var newStream = File.OpenRead(path);
+            var fileStream = client.GetStream();
+            await fileStream.CopyToAsync(newStream);
+            byte[] content = await File.ReadAllBytesAsync(path);
+            await writer.WriteLineAsync($"{size}: {content}");
+        }
+        catch (Exception ex)
+        {
+            await writer.WriteLineAsync($"Get error: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -137,10 +162,5 @@ public class Server
         {
             await writer.WriteLineAsync($"List error: {ex.Message}");
         }
-    }
-
-    public void Accept()
-    {
-
     }
 }
