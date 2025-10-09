@@ -2,7 +2,7 @@
 // Marina Popova, 2025, under MIT License.
 // </copyright>
 
-namespace SimpleFTP;
+namespace FTPServer;
 
 using System.Net;
 using System.Net.Sockets;
