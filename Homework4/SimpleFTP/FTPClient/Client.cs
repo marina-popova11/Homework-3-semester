@@ -16,10 +16,10 @@ using System.Threading.Tasks;
 public class Client
 {
     private TcpClient client;
+    private Stream stream;
     private StreamWriter writer;
     private StreamReader reader;
     private bool isConnected;
-    private bool isDispose;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Client"/> class.
@@ -27,6 +27,9 @@ public class Client
     public Client()
     {
         this.client = new TcpClient();
+        this.stream = this.client.GetStream();
+        this.writer = new StreamWriter(this.stream);
+        this.reader = new StreamReader(this.stream);
         this.isConnected = false;
     }
 
@@ -45,12 +48,7 @@ public class Client
     public async Task Connect(IPAddress ip, int port)
     {
         await this.client.ConnectAsync(ip, port);
-        var netStream = this.client.GetStream();
-        using (this.writer = new StreamWriter(netStream))
-        using (this.reader = new StreamReader(netStream))
-        {
-            this.isConnected = true;
-        }
+        this.isConnected = true;
     }
 
     /// <summary>
@@ -147,6 +145,7 @@ public class Client
     {
         this.reader.Close();
         this.writer.Close();
+        this.stream.Close();
         this.client.Close();
     }
 }
