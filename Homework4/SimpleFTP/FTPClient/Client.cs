@@ -35,6 +35,11 @@ public class Client
         /// Gets or sets a value indicating whether.
         /// </summary>
         public bool IsDir { get; set; } = false;
+
+        // public string ToString()
+        // {
+        //     return $"";
+        // }
     }
 
     /// <summary>
@@ -72,6 +77,7 @@ public class Client
     /// </summary>
     /// <param name="path">What the file will be viewed.</param>
     /// <returns>List of files in directory.</returns>
+    /// <exception cref="InvalidOperationException">If directory not found.</exception>
     public async Task<List<MyFileInfo>> CommandList(string path)
     {
         if (!this.IsConnect())
@@ -85,13 +91,13 @@ public class Client
         var response = await this.reader.ReadLineAsync();
         if (response == "-1")
         {
-            return new List<MyFileInfo>();
+            throw new InvalidOperationException($"Directory not found at path: {path}");
         }
 
         var parts = response!.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (!int.TryParse(parts[0], out var size) || size < 0)
         {
-            return new List<MyFileInfo>();
+            throw new InvalidOperationException("Incorrect size.");
         }
 
         var list = new List<MyFileInfo>();
@@ -125,6 +131,7 @@ public class Client
     /// <param name="path">What the file will be copy.</param>
     /// <param name="localPath">Where file will be download to.</param>
     /// <returns>True if file was successfully downloaded, false overwise.</returns>
+    /// <exception cref="InvalidOperationException">If directory not found.</exception>
     public async Task<bool> CommandGet(string path, string localPath)
     {
         if (!this.IsConnect())
@@ -138,7 +145,7 @@ public class Client
         var response = await this.reader.ReadLineAsync();
         if (response == "-1")
         {
-            return false;
+            throw new InvalidOperationException($"Directory not found at path: {path}");
         }
 
         if (!long.TryParse(response, out var size) || size < 0)

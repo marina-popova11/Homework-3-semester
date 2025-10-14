@@ -30,12 +30,12 @@ public class Server
     /// Starts the server operation.
     /// </summary>
     /// <returns>Completed task.</returns>
-    public Task Run()
+    public async Task Run()
     {
         while (true)
         {
             var client = this.listener.AcceptTcpClient();
-            Task.Run(() => this.HandleClient(client));
+            _ = Task.Run(async () => this.HandleClient(client));
         }
     }
 
