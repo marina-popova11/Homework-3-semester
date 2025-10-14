@@ -22,5 +22,13 @@ if (!int.TryParse(args[1], out var port))
     Console.WriteLine("Incorrect port. Enter the port that is not busy and is working");
 }
 
-var server = new Server(ip, port);
-await server.Run();
+try
+{
+    Console.WriteLine("Start");
+    var server = new Server(ip, port);
+    await server.Run();
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Server error: {ex.Message}");
+}

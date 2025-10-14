@@ -34,7 +34,7 @@ try
 {
     while (isContinue)
     {
-        Console.WriteLine("Entre the command");
+        Console.WriteLine("Enter the command");
         Console.WriteLine($"{listCommand} - for listing files.");
         Console.WriteLine($"{getCommand} - for getting file.");
         Console.WriteLine($"{exitCommand} - for getting file.");
@@ -44,7 +44,7 @@ try
             case "1":
                 {
                     Console.WriteLine("Enter the path: ");
-                    var path = listCommand + ' ' + Console.ReadLine();
+                    var path = Console.ReadLine();
                     var response = await client.CommandList(path!);
                     Console.WriteLine($"The response: {response}");
                     break;
@@ -53,11 +53,10 @@ try
             case "2":
                 {
                     Console.WriteLine("Enter the path: ");
-                    var part1 = Console.ReadLine();
+                    var path = Console.ReadLine();
                     Console.WriteLine("Enter the path where file will be download to: ");
                     var part2 = Console.ReadLine();
-                    var path = getCommand + ' ' + part1;
-                    var response = await client.CommandGet(path, part2!);
+                    var response = await client.CommandGet(path!, part2!);
                     Console.WriteLine($"The response: {response}");
                     break;
                 }

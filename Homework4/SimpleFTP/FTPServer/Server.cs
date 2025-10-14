@@ -109,25 +109,31 @@ public class Server
     {
         try
         {
-            if (!Directory.Exists(path))
+            if (!File.Exists(path))
             {
                 await writer.WriteAsync("-1");
+                await writer.FlushAsync();
                 return;
             }
 
             var fileInfo = new FileInfo(path);
             var size = fileInfo.Length.ToString();
             await writer.WriteLineAsync(size);
+            await writer.FlushAsync();
 
-            var newStream = File.OpenRead(path);
-            var fileStream = client.GetStream();
-            await fileStream.CopyToAsync(newStream);
+            using (var fileStream = File.OpenRead(path))
+            using (var netStream = client.GetStream())
+            {
+                await fileStream.CopyToAsync(netStream);
+            }
+
             byte[] content = await File.ReadAllBytesAsync(path);
-            await writer.WriteLineAsync($"{size}: {content}");
+            await writer.WriteLineAsync($"{content}");
         }
         catch (Exception ex)
         {
             await writer.WriteLineAsync($"Get error: {ex.Message}");
+            await writer.FlushAsync();
         }
     }
 
@@ -144,23 +150,27 @@ public class Server
             if (!Directory.Exists(path))
             {
                 await writer.WriteAsync("-1");
+                await writer.FlushAsync();
                 return;
             }
 
             var files = Directory.GetFileSystemEntries(path);
             await writer.WriteLineAsync(files.Length.ToString());
+            await writer.FlushAsync();
             foreach (var file in files)
             {
                 var info = new FileInfo(file);
                 var isDir = (File.GetAttributes(file) & FileAttributes.Directory) == FileAttributes.Directory;
                 var size = isDir ? info.Length : -1;
 
-                await writer.WriteLineAsync($"{size} ({Path.GetFileName(file)} {isDir}\n");
+                await writer.WriteLineAsync($"({Path.GetFileName(file)} {isDir})\n");
+                await writer.FlushAsync();
             }
         }
         catch (Exception ex)
         {
             await writer.WriteLineAsync($"List error: {ex.Message}");
+            await writer.FlushAsync();
         }
     }
 }

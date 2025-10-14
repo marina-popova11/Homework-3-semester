@@ -22,14 +22,27 @@ public class Client
     private bool isConnected;
 
     /// <summary>
+    /// The class for file information.
+    /// </summary>
+    public class MyFileInfo
+    {
+        /// <summary>
+        /// Gets or sets the name of file.
+        /// </summary>
+        public string Name { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Gets or sets a value indicating whether.
+        /// </summary>
+        public bool IsDir { get; set; } = false;
+    }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="Client"/> class.
     /// </summary>
     public Client()
     {
         this.client = new TcpClient();
-        this.stream = this.client.GetStream();
-        this.writer = new StreamWriter(this.stream);
-        this.reader = new StreamReader(this.stream);
         this.isConnected = false;
     }
 
@@ -48,6 +61,9 @@ public class Client
     public async Task Connect(IPAddress ip, int port)
     {
         await this.client.ConnectAsync(ip, port);
+        this.stream = this.client.GetStream();
+        this.writer = new StreamWriter(this.stream);
+        this.reader = new StreamReader(this.stream);
         this.isConnected = true;
     }
 
@@ -56,40 +72,48 @@ public class Client
     /// </summary>
     /// <param name="path">What the file will be viewed.</param>
     /// <returns>List of files in directory.</returns>
-    public async Task<List<FileInfo>> CommandList(string path)
+    public async Task<List<MyFileInfo>> CommandList(string path)
     {
         if (!this.IsConnect())
         {
             await this.writer.WriteLineAsync("Client does not connect!");
-            return new List<FileInfo>();
+            return new List<MyFileInfo>();
         }
 
         await this.writer.WriteLineAsync($"1 {path}");
+        await this.writer.FlushAsync();
         var response = await this.reader.ReadLineAsync();
         if (response == "-1")
         {
-            return new List<FileInfo>();
+            return new List<MyFileInfo>();
         }
 
-        if (!int.TryParse(response, out var size) || size < 0)
+        var parts = response!.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (!int.TryParse(parts[0], out var size) || size < 0)
         {
-            return new List<FileInfo>();
+            return new List<MyFileInfo>();
         }
 
-        var list = new List<FileInfo>();
+        var list = new List<MyFileInfo>();
+        var index = 1;
         for (int i = 0; i < size; ++i)
         {
-            var line = await this.reader.ReadLineAsync();
-            var parts = line!.Split(' ');
-            var fileObject = new FileInfo(parts[1]);
-            list.Add(fileObject);
+            if (index + 1 >= parts.Length)
+            {
+                break;
+            }
 
-            // list.Add(new FileInfo
-            // {
-            //     Size = long.Parse(parts[0]),
-            //     Name = parts[1],
-            //     IsDir = bool.Parse(parts[3]),
-            // });
+            var name = parts[index++];
+            if (!bool.TryParse(parts[index++], out var isDir))
+            {
+                continue;
+            }
+
+            list.Add(new MyFileInfo
+            {
+                Name = name,
+                IsDir = isDir,
+            });
         }
 
         return list;
@@ -110,6 +134,7 @@ public class Client
         }
 
         await this.writer.WriteLineAsync($"2 {path}");
+        await this.writer.FlushAsync();
         var response = await this.reader.ReadLineAsync();
         if (response == "-1")
         {
@@ -122,19 +147,18 @@ public class Client
         }
 
         using (var localFile = File.Create(localPath))
-        using (var netStream = this.client.GetStream())
         {
             var buffer = new byte[4096];
-            var readBytes = 0;
-            while (readBytes < size)
+            var allBytes = 0;
+            while (allBytes < size)
             {
-                var remainingBytes = await netStream.ReadAsync(buffer, 0, (int)Math.Min(buffer.Length, size - readBytes));
+                var remainingBytes = await this.stream.ReadAsync(buffer, 0, (int)Math.Min(buffer.Length, size - allBytes));
                 await localFile.WriteAsync(buffer, 0, remainingBytes);
-                ++readBytes;
+                allBytes += remainingBytes;
             }
-        }
 
-        return true;
+            return allBytes == size;
+        }
     }
 
     /// <summary>
