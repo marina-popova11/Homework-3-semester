@@ -16,35 +16,16 @@ using System.Threading.Tasks;
 public class Client
 {
     private TcpClient client;
-    private Stream stream;
-    private StreamWriter writer;
-    private StreamReader reader;
+    private Stream stream = null!;
+    private StreamWriter writer = null!;
+    private StreamReader reader = null!;
     private bool isConnected;
-
-    /// <summary>
-    /// The class for file information.
-    /// </summary>
-    public class MyFileInfo
-    {
-        /// <summary>
-        /// Gets or sets the name of file.
-        /// </summary>
-        public string Name { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Gets or sets a value indicating whether.
-        /// </summary>
-        public bool IsDir { get; set; } = false;
-
-        // public string ToString()
-        // {
-        //     return $"";
-        // }
-    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Client"/> class.
     /// </summary>
+    /// <param name="ip">Ip address for connect to.</param>
+    /// <param name="port">Port number for connect to.</param>
     public Client()
     {
         this.client = new TcpClient();
@@ -82,8 +63,7 @@ public class Client
     {
         if (!this.IsConnect())
         {
-            await this.writer.WriteLineAsync("Client does not connect!");
-            return new List<MyFileInfo>();
+            throw new InvalidOperationException("Client does not connect!");
         }
 
         await this.writer.WriteLineAsync($"1 {path}");
@@ -136,8 +116,7 @@ public class Client
     {
         if (!this.IsConnect())
         {
-            await this.writer.WriteLineAsync("Client does not connect!");
-            return false;
+            throw new InvalidOperationException("Client does not connect!");
         }
 
         await this.writer.WriteLineAsync($"2 {path}");
@@ -178,5 +157,21 @@ public class Client
         this.writer.Close();
         this.stream.Close();
         this.client.Close();
+    }
+
+    /// <summary>
+    /// The class for file information.
+    /// </summary>
+    public class MyFileInfo
+    {
+        /// <summary>
+        /// Gets or sets the name of file.
+        /// </summary>
+        public string Name { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Gets or sets a value indicating whether.
+        /// </summary>
+        public bool IsDir { get; set; } = false;
     }
 }
