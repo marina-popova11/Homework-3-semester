@@ -109,6 +109,7 @@ public class Server
     {
         try
         {
+            var stream = client.GetStream();
             if (!File.Exists(path))
             {
                 await writer.WriteAsync("-1");
@@ -117,22 +118,26 @@ public class Server
             }
 
             var fileInfo = new FileInfo(path);
-            var size = fileInfo.Length.ToString();
-            await writer.WriteLineAsync(size);
+            long size = fileInfo.Length;
+            await writer.WriteAsync($"{size} ");
             await writer.FlushAsync();
 
             using (var fileStream = File.OpenRead(path))
-            using (var netStream = client.GetStream())
             {
-                await fileStream.CopyToAsync(netStream);
-            }
+                var buffer = new byte[4096];
+                var allBytes = 0;
+                while ((allBytes = await fileStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                {
+                    await stream.WriteAsync(buffer, 0, allBytes);
+                }
 
-            byte[] content = await File.ReadAllBytesAsync(path);
-            await writer.WriteLineAsync($"{content}");
+                await stream.FlushAsync();
+            }
         }
         catch (Exception ex)
         {
-            await writer.WriteLineAsync($"Get error: {ex.Message}");
+            Console.WriteLine($"Get error: {ex.Message}");
+            await writer.WriteAsync("-1");
             await writer.FlushAsync();
         }
     }
@@ -155,21 +160,22 @@ public class Server
             }
 
             var files = Directory.GetFileSystemEntries(path);
-            await writer.WriteLineAsync(files.Length.ToString());
-            await writer.FlushAsync();
+            var responseParts = new List<string> { files.Length.ToString() };
             foreach (var file in files)
             {
-                var info = new FileInfo(file);
                 var isDir = (File.GetAttributes(file) & FileAttributes.Directory) == FileAttributes.Directory;
-                var size = isDir ? info.Length : -1;
-
-                await writer.WriteLineAsync($"({Path.GetFileName(file)} {isDir})\n");
-                await writer.FlushAsync();
+                responseParts.Add(file);
+                responseParts.Add(isDir.ToString().ToLower());
             }
+
+            var response = string.Join(' ', responseParts);
+            await writer.WriteLineAsync(response);
+            await writer.FlushAsync();
         }
         catch (Exception ex)
         {
-            await writer.WriteLineAsync($"List error: {ex.Message}");
+            Console.WriteLine($"List error: {ex.Message}");
+            await writer.WriteLineAsync("-1");
             await writer.FlushAsync();
         }
     }

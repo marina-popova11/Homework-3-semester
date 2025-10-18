@@ -46,7 +46,20 @@ try
                     Console.WriteLine("Enter the path: ");
                     var path = Console.ReadLine();
                     var response = await client.CommandList(path!);
-                    Console.WriteLine($"The response: {response}");
+                    if (response.Count == 0)
+                    {
+                        Console.WriteLine("Directory is empty.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Files:\n");
+                        foreach (var file in response)
+                        {
+                            var type = file.IsDir ? "<Dir>" : "File";
+                            Console.WriteLine($"{type}: {file.Name}");
+                        }
+                    }
+
                     break;
                 }
 
@@ -57,7 +70,7 @@ try
                     Console.WriteLine("Enter the path where file will be download to: ");
                     var part2 = Console.ReadLine();
                     var response = await client.CommandGet(path!, part2!);
-                    Console.WriteLine($"The response: {response}");
+                    Console.WriteLine("File was copied.");
                     break;
                 }
 

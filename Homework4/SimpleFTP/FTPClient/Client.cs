@@ -6,6 +6,7 @@ namespace FTPClient;
 
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading.Tasks;
 
 /// <summary>
@@ -58,7 +59,8 @@ public class Client
     /// </summary>
     /// <param name="path">What the file will be viewed.</param>
     /// <returns>List of files in directory.</returns>
-    /// <exception cref="InvalidOperationException">If directory not found.</exception>
+    /// <exception cref="InvalidOperationException">If client does not connect/ directory not found/ size is not correct/
+    /// server return incomplete response.</exception>
     public async Task<List<MyFileInfo>> CommandList(string path)
     {
         if (!this.IsConnect())
@@ -86,7 +88,7 @@ public class Client
         {
             if (index + 1 >= parts.Length)
             {
-                break;
+                throw new InvalidOperationException("Server returned incomplete response.");
             }
 
             var name = parts[index++];
@@ -111,7 +113,8 @@ public class Client
     /// <param name="path">What the file will be copy.</param>
     /// <param name="localPath">Where file will be download to.</param>
     /// <returns>True if file was successfully downloaded, false overwise.</returns>
-    /// <exception cref="InvalidOperationException">If directory not found.</exception>
+    /// <exception cref="InvalidOperationException">If client does not connect/ server disconnected before sending size/
+    /// file not found.</exception>
     public async Task<bool> CommandGet(string path, string localPath)
     {
         if (!this.IsConnect())
@@ -121,13 +124,30 @@ public class Client
 
         await this.writer.WriteLineAsync($"2 {path}");
         await this.writer.FlushAsync();
-        var response = await this.reader.ReadLineAsync();
-        if (response == "-1")
+        var size = new StringBuilder();
+        while (true)
         {
-            throw new InvalidOperationException($"Directory not found at path: {path}");
+            int b = this.stream.ReadByte();
+            if (b == -1)
+            {
+                throw new InvalidOperationException($"Server disconnected before sending size.");
+            }
+
+            if (b == ' ')
+            {
+                break;
+            }
+
+            size.Append((char)b);
         }
 
-        if (!long.TryParse(response, out var size) || size < 0)
+        var sizeString = size.ToString();
+        if (sizeString == "-1")
+        {
+            throw new InvalidOperationException($"File not found at path: {path}");
+        }
+
+        if (!long.TryParse(sizeString, out var fileSize) || fileSize < 0)
         {
             return false;
         }
@@ -136,14 +156,21 @@ public class Client
         {
             var buffer = new byte[4096];
             var allBytes = 0;
-            while (allBytes < size)
+            while (allBytes < fileSize)
             {
-                var remainingBytes = await this.stream.ReadAsync(buffer, 0, (int)Math.Min(buffer.Length, size - allBytes));
-                await localFile.WriteAsync(buffer, 0, remainingBytes);
+                var remainingBytes = (int)Math.Min(buffer.Length, fileSize - allBytes);
+                var bytesRead = await this.stream.ReadAsync(buffer, 0, remainingBytes);
+                if (bytesRead == 0)
+                {
+                    throw new IOException("Connect close before file was fully.");
+                }
+
+                await localFile.WriteAsync(buffer, 0, bytesRead);
                 allBytes += remainingBytes;
             }
 
-            return allBytes == size;
+            await localFile.FlushAsync();
+            return allBytes == fileSize;
         }
     }
 
