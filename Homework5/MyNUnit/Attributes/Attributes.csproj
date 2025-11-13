@@ -18,8 +18,4 @@
     <AdditionalFiles Include="../stylecop.json" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Attributes\Attributes.csproj" />
-  </ItemGroup>
-
 </Project>
