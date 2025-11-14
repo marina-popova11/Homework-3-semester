@@ -36,6 +36,12 @@ public class Reporter
     public List<string> Errors { get; } = new();
 
     /// <summary>
+    /// Gets or sets the count of failed tests.
+    /// </summary>
+    /// <returns>The number of failed tests.</returns>
+    public int FailedCount() => this.Results!.Count(x => x.Status == Status.Failed);
+
+    /// <summary>
     /// Creates the report.
     /// </summary>
     /// <param name="results">The results of all tests.</param>

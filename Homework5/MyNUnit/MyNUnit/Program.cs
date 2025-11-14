@@ -20,10 +20,11 @@ if (!File.Exists(path))
 var runner = new Runner();
 try
 {
-    runner.TestRunner(path);
+    var report = runner.TestRunner(path);
+    Environment.Exit(report.FailedCount() > 0 ? 1 : 0);
 }
 catch (Exception ex)
 {
     Console.WriteLine($"Error: {ex.Message}");
-    return;
+    Environment.Exit(2);
 }
