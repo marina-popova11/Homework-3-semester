@@ -36,19 +36,19 @@ public class Searcher
                     TestAttribute? testAt = method.GetCustomAttribute<TestAttribute>();
                     if (testAt != null)
                     {
-                        classInfo.TestMethods.Add(method);
+                        classInfo.TestMethods!.Add(method);
                     }
 
                     Before? before = method.GetCustomAttribute<Before>();
                     if (before != null)
                     {
-                        classInfo.BeforeMethods.Add(method);
+                        classInfo.BeforeMethods!.Add(method);
                     }
 
                     After? after = method.GetCustomAttribute<After>();
                     if (before != null)
                     {
-                        classInfo.AfterMethods.Add(method);
+                        classInfo.AfterMethods!.Add(method);
                     }
 
                     BeforeClass? beforeClass = method.GetCustomAttribute<BeforeClass>();
@@ -57,7 +57,7 @@ public class Searcher
                         if (!method.IsStatic)
                         {
                             Console.WriteLine("BeforeClass Method should be static");
-                            classInfo.BeforeClassMethods.Add(method);
+                            classInfo.BeforeClassMethods!.Add(method);
                         }
                     }
 
@@ -67,11 +67,11 @@ public class Searcher
                         if (!method.IsStatic)
                         {
                             Console.WriteLine("AfterClass Method should be static");
-                            classInfo.AfterClassMethods.Add(method);
+                            classInfo.AfterClassMethods!.Add(method);
                         }
                     }
 
-                    if (classInfo.TestMethods.Count > 0)
+                    if (classInfo.TestMethods!.Count > 0)
                     {
                         testClasses.Add(classInfo);
                     }

@@ -4,6 +4,8 @@
 
 namespace MyNUnit;
 
+using System.Reflection;
+
 /// <summary>
 /// .
 /// </summary>
@@ -20,21 +22,21 @@ public class Executor
     }
 
     /// <summary>
-    /// 
+    /// Runs a TestClassRunner for each class.
     /// </summary>
-    /// <param name="testClass"></param>
+    /// <param name="testClass">Test class for execute.</param>
     /// <returns>Execution results.</returns>
-    public Reporter TestExecutor(List<TestClassInfo> testClass)
+    public List<Reporter.TestResult> TestExecutor(List<TestClassInfo> testClass)
     {
-        var result = new Reporter();
+        var results = new List<Reporter.TestResult>();
         Parallel.ForEach(testClass, classInfo =>
         {
             try
             {
                 var classResults = this.classRunner.RunTests(classInfo);
-                lock (result)
+                lock (results)
                 {
-                    result.AddResult(classResults);
+                    results.AddRange(classResults);
                 }
             }
             catch (Exception ex)
@@ -43,15 +45,98 @@ public class Executor
             }
         });
 
-        return result;
+        return results;
     }
 
+    /// <summary>
+    /// manages the lifecycle of tests within a single class.
+    /// </summary>
     private class TestClassRunner
     {
-        public Task RunTests(TestClassInfo classInfo)
+        public List<Reporter.TestResult> RunTests(TestClassInfo classInfo)
         {
-            
+            var result = new List<Reporter.TestResult>();
+            this.RunBeforeClassMethods(classInfo);
+            foreach (var method in classInfo.TestMethods!)
+            {
+                var testResult = this.RunSingleTest(classInfo, method);
+                result.AddRange(testResult);
+            }
+
+            this.RunAfterClassMethods(classInfo);
+            return result;
         }
 
+        public Reporter.TestResult RunSingleTest(TestClassInfo classInfo, MethodInfo method)
+        {
+            var testInfo = new Reporter.TestResult
+            {
+                Name = method.Name,
+                ClassName = classInfo.ClassType!.Name,
+            };
+
+            object testInstance = null!;
+            try
+            {
+                testInstance = Activator.CreateInstance(classInfo.ClassType)!;
+                this.RunBeforeMethods(classInfo, testInstance);
+                method.Invoke(testInstance, null);
+                testInfo.Status = Reporter.Status.Passed;
+            }
+            catch (Exception ex)
+            {
+                testInfo.Status = Reporter.Status.Failed;
+                testInfo.Error = ex.Message;
+            }
+
+            this.RunAfterMethods(classInfo, testInstance);
+            return testInfo;
+        }
+
+        public void RunBeforeClassMethods(TestClassInfo classInfo)
+        {
+            foreach (var method in classInfo.BeforeClassMethods!)
+            {
+                try
+                {
+                    method.Invoke(null, null);
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException($"BeforeClass method {method.Name} failed: {ex.Message}");
+                }
+            }
+        }
+
+        public void RunAfterClassMethods(TestClassInfo classInfo)
+        {
+            foreach (var method in classInfo.AfterClassMethods!)
+            {
+                try
+                {
+                    method.Invoke(null, null);
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException($"AfterClass method {method.Name} failed: {ex.Message}");
+                }
+            }
+        }
+
+        public void RunAfterMethods(TestClassInfo classInfo, object testInstance)
+        {
+            foreach (var method in classInfo.AfterMethods!)
+            {
+                method.Invoke(testInstance, null);
+            }
+        }
+
+        public void RunBeforeMethods(TestClassInfo classInfo, object testInstance)
+        {
+            foreach (var method in classInfo.BeforeMethods!)
+            {
+                method.Invoke(testInstance, null);
+            }
+        }
     }
 }

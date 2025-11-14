@@ -13,6 +13,10 @@ public class TestAttribute : Attribute
     /// <summary>
     /// Gets or sets the type of expected expression.
     /// </summary>
-    public Type Expected { get; set; }
+    public Type? Expected { get; set; }
 
+    /// <summary>
+    /// Gets or sets the reason to ignore test.
+    /// </summary>
+    public string? Ignored { get; set; }
 }
