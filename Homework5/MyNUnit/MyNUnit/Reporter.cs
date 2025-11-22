@@ -4,6 +4,8 @@
 
 namespace MyNUnit;
 
+using Attributes;
+
 /// <summary>
 /// .
 /// </summary>

@@ -1,13 +1,13 @@
-// <copyright file="AfterClass.cs" company="_">
+// <copyright file="AfterClassAttribute.cs" company="_">
 // Marina Popova, 2025, under MIT License.
 // </copyright>
 
-namespace MyNUnit;
+namespace Attributes;
 
 /// <summary>
 /// Identifies a static method to be called once after all tests have run.
 /// </summary>
 [AttributeUsage(AttributeTargets.Method, Inherited = false)]
-public class AfterClass : Attribute
+public class AfterClassAttribute : Attribute
 {
 }

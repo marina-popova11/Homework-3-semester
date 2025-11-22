@@ -26,6 +26,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MyNUnit\MyNUnit.csproj" />
+    <ProjectReference Include="..\Attributes\Attributes.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -5,9 +5,10 @@
 namespace MyNUnit;
 
 using System.Reflection;
+using Attributes;
 
 /// <summary>
-/// .
+/// Class for execute all found tests.
 /// </summary>
 public class Executor
 {
@@ -60,7 +61,7 @@ public class Executor
             foreach (var method in classInfo.TestMethods!)
             {
                 var testResult = this.RunSingleTest(classInfo, method);
-                result.AddRange(testResult);
+                result.Add(testResult);
             }
 
             this.RunAfterClassMethods(classInfo);
@@ -88,8 +89,11 @@ public class Executor
                 testInfo.Status = Reporter.Status.Failed;
                 testInfo.Error = ex.Message;
             }
+            finally
+            {
+                this.RunAfterMethods(classInfo, testInstance);
+            }
 
-            this.RunAfterMethods(classInfo, testInstance);
             return testInfo;
         }
 

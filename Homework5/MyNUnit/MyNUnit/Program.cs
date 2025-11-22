@@ -4,14 +4,13 @@
 
 using MyNUnit;
 
-if (args.Length == 0)
-{
-    Console.WriteLine("Specify the path to the assemblies!");
-    return;
-}
-
-var path = args[0];
-if (!File.Exists(path))
+// if (args.Length == 0)
+// {
+//     Console.WriteLine("Specify the path to the assemblies!");
+//     return;
+// }
+var path = "C:/Users/peche/source/repos/Homework-3-semester/Homework5/MyNUnit/MyNUnit.Tests/bin/Debug/net9.0";
+if (!Directory.Exists(path))
 {
     Console.WriteLine("There are no builds on this path.");
     return;

@@ -1,13 +1,13 @@
-// <copyright file="Before.cs" company="_">
+// <copyright file="BeforeAttribute.cs" company="_">
 // Marina Popova, 2025, under MIT License.
 // </copyright>
 
-namespace MyNUnit;
+namespace Attributes;
 
 /// <summary>
 /// Identifies a static method to be called once before each test is run.
 /// </summary>
 [AttributeUsage(AttributeTargets.Method, Inherited = false)]
-public class Before : Attribute
+public class BeforeAttribute : Attribute
 {
 }
