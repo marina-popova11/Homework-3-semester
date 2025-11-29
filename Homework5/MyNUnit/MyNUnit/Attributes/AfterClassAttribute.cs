@@ -2,7 +2,7 @@
 // Marina Popova, 2025, under MIT License.
 // </copyright>
 
-namespace Attributes;
+namespace MyNUnit.Attributes;
 
 /// <summary>
 /// Identifies a static method to be called once after all tests have run.

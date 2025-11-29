@@ -2,7 +2,7 @@
 // Marina Popova, 2025, under MIT License.
 // </copyright>
 
-namespace Attributes;
+namespace MyNUnit.Attributes;
 
 /// <summary>
 /// The method as callable from the test runner.

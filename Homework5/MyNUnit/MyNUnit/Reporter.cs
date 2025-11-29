@@ -4,7 +4,7 @@
 
 namespace MyNUnit;
 
-using Attributes;
+using MyNUnit.Attributes;
 
 /// <summary>
 /// .

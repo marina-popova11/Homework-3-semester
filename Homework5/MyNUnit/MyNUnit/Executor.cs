@@ -5,7 +5,7 @@
 namespace MyNUnit;
 
 using System.Reflection;
-using Attributes;
+using MyNUnit.Attributes;
 
 /// <summary>
 /// Class for execute all found tests.
