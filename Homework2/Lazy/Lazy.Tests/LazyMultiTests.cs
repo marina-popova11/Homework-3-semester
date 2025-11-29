@@ -8,39 +8,31 @@ namespace Lazy.Tests;
 public class LazyMultiTests : LazyCommonTests
 {
     [Test]
-    public void Test_GetForMultiALLThreadGetSameExceptions()
+    public void Test_SupplierCallOnce()
     {
         var threadCount = 20;
-        var exceptionCount = 0;
-        var exception = new InvalidDataException("Exception!");
+        var callCount = 0;
         var barrier = new Barrier(threadCount);
 
         var lazy = this.CreateLazy<int>(() =>
         {
-            Interlocked.Increment(ref exceptionCount);
-            throw exception;
+            Interlocked.Increment(ref callCount);
+            return 10;
         });
 
-        var newExceptions = new Exception[threadCount];
+        var results = new int[threadCount];
         var threads = new Thread[threadCount];
 
         for (int i = 0; i < threadCount; ++i)
         {
             int index = i;
-            threads[i] = new Thread(() =>
+            threads[index] = new Thread(() =>
             {
                 barrier.SignalAndWait();
-                try
-                {
-                    lazy.Get();
-                }
-                catch (Exception ex)
-                {
-                    newExceptions[index] = ex;
-                }
+                results[index] = lazy.Get();
             });
 
-            threads[i].Start();
+            threads[index].Start();
         }
 
         foreach (var thread in threads)
@@ -50,9 +42,57 @@ public class LazyMultiTests : LazyCommonTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(exceptionCount, Is.EqualTo(1));
-            Assert.That(newExceptions, Is.All.InstanceOf<InvalidDataException>());
-            Assert.That(newExceptions.Select(e => e.Message), Is.All.EqualTo("Exception!"));
+            Assert.That(callCount, Is.EqualTo(1));
+            Assert.That(results, Is.All.EqualTo(10));
+        });
+    }
+
+    /// <summary>
+    /// when an exception occurs in the supplier, it is called once, and all threads receive the exception.
+    /// </summary>
+    [Test]
+    public void Test_SupplierIsInvokedOnceOnException()
+    {
+        var threadCount = 20;
+        var exception = "Error, Exception!";
+        var callCount = 0;
+        var barrier = new Barrier(threadCount);
+        var lazy = this.CreateLazy<int>(() =>
+        {
+            Interlocked.Increment(ref callCount);
+            throw new InvalidOperationException(exception);
+        });
+
+        var exceptions = new Exception[threadCount];
+        var threads = new Thread[threadCount];
+        for (int i = 0; i < threadCount; ++i)
+        {
+            int index = i;
+            threads[index] = new Thread(() =>
+            {
+                barrier.SignalAndWait();
+                try
+                {
+                    lazy.Get();
+                }
+                catch (Exception ex)
+                {
+                    exceptions[index] = ex;
+                }
+            });
+            threads[index].Start();
+        }
+
+        foreach (var thread in threads)
+        {
+            thread.Join();
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(callCount, Is.EqualTo(1));
+            Assert.That(exceptions, Is.All.InstanceOf<InvalidOperationException>());
+            Assert.That(exceptions.Select(e => e.Message), Is.All.EqualTo(exception));
         });
     }
 

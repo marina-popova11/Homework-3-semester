@@ -33,9 +33,9 @@ public abstract class LazyCommonTests
     public void Test_GetForSameObjectsSameGets()
     {
         var lazy = this.CreateLazy<object>(() => new object());
-        var object1 = lazy.Get();
-        var object2 = lazy.Get();
-        Assert.That(object1, Is.EqualTo(object2));
+        var firstObject = lazy.Get();
+        var secondObject = lazy.Get();
+        Assert.That(firstObject, Is.EqualTo(secondObject));
     }
 
     [Test]
