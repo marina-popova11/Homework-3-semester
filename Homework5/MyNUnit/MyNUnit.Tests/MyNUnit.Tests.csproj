@@ -6,6 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,7 +28,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MyNUnit\MyNUnit.csproj" />
-    <ProjectReference Include="..\Attributes\Attributes.csproj" />
+    <ProjectReference Include="..\MyNUnit.FakeTests\MyNUnit.FakeTests.csproj" />
   </ItemGroup>
 
   <ItemGroup>
