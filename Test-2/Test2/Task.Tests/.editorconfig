@@ -1,0 +1,7 @@
+[*.cs]
+
+# SA1600: Elements should be documented
+dotnet_diagnostic.SA1600.severity = none
+
+# SA1401: Fields should be private
+dotnet_diagnostic.SA1401.severity = none
