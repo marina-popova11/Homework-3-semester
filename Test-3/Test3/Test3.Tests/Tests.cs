@@ -14,10 +14,13 @@ public class Tests
     public async Task Test_ServerAndClient()
     {
         int port = 8888;
+        var serverReady = new TaskCompletionSource<bool>();
         var serverTask = Task.Run(async () =>
         {
             var listener = new TcpListener(IPAddress.Loopback, port);
             listener.Start();
+            serverReady.SetResult(true);
+
             using var client = await listener.AcceptTcpClientAsync();
             listener.Stop();
 
@@ -28,6 +31,8 @@ public class Tests
             Assert.That(message.Trim(), Is.EqualTo("exit"));
             client.Close();
         });
+
+        await serverReady.Task;
 
         using var client = new TcpClient();
         await client.ConnectAsync(IPAddress.Loopback, port);
