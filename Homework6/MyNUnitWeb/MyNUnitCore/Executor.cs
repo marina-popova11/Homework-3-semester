@@ -92,7 +92,7 @@ public class Executor
             object testInstance = null!;
             try
             {
-                testInstance = Activator.CreateInstance(classInfo.ClassType)!;
+                testInstance = Activator.CreateInstance(classInfo.ClassType!)!;
                 this.RunBeforeMethods(classInfo, testInstance);
                 method.Invoke(testInstance, null);
                 testInfo.Status = Reporter.Status.Passed;

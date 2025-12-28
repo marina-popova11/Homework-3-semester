@@ -4,8 +4,8 @@
 
 namespace MyNUnit;
 
-using MyNUnit.Attributes;
 using System.IO;
+using MyNUnit.Attributes;
 
 /// <summary>
 /// Class for test runner.

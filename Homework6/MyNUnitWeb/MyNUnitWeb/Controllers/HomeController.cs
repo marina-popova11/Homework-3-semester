@@ -101,7 +101,7 @@ public class HomeController : Controller
         {
             var assemblyReport = new AssemblyReport
             {
-                AssemblyName = group!.Key,
+                AssemblyName = group.Key,
                 StartedAt = DateTime.UtcNow,
             };
 
@@ -160,16 +160,16 @@ public class HomeController : Controller
     /// </summary>
     /// <returns>OK result with list of test run summaries, ordered by most recent first.</returns>
     [HttpGet]
-    public async Task<IActionResult> GetHistory()
+    public async Task<IActionResult> History()
     {
         var history = await this.history.Assemblies
             .Select(a => new
             {
                 a.AssemblyName,
                 a.Id,
-                Passed = a.Tests.Count(t => t.Status == "Passed"),
-                Failed = a.Tests.Count(t => t.Status == "Failed"),
-                Ignored = a.Tests.Count(t => t.Status == "Ignored"),
+                Passed = a.Passed,
+                Failed = a.Failed,
+                Ignored = a.Ignored,
             })
             .OrderByDescending(a => a.Id)
             .ToListAsync();
