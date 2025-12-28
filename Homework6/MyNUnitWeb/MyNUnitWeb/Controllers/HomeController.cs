@@ -32,6 +32,15 @@ public class HomeController : Controller
     }
 
     /// <summary>
+    /// .
+    /// </summary>
+    /// <returns>d.</returns>
+    public IActionResult Index()
+    {
+        return this.View();
+    }
+
+    /// <summary>
     /// Handles the upload of DLL files containing tests.
     /// </summary>
     /// <param name="files">Array of files uploaded by the client.</param>
