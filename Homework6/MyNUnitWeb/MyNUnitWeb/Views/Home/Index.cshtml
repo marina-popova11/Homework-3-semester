@@ -97,7 +97,11 @@
                 const data = await res.json();
                 if (res.ok && data.success) {
                     document.getElementById('uploadStatus').innerHTML = '<div class="alert alert-success">Tests completed!</div>';
-                    showTestResults(data.reports);
+                    if (data.reports) {
+                        showTestResults(data.reports);
+                    } else {
+                        document.getElementById('latestResult').innerHTML = `<div class="alert alert-info">${data.message || 'No tests were found.'}</div>`;
+                    }
                     loadHistory();
                 } else {
                     throw new Error(data.message || 'Unknown error');
@@ -108,6 +112,10 @@
         });
 
         function showTestResults(reports) {
+            if (!reports || !Array.isArray(reports)) {
+                document.getElementById('latestResult').innerHTML = '<div class="alert alert-warning">No test reports to display.</div>';
+                return;
+            }
             let html = '<h4>Latest Test Results</h4>';
             reports.forEach(report => {
                 html += `

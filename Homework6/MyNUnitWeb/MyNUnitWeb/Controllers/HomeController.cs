@@ -46,7 +46,7 @@ public class HomeController : Controller
     /// <param name="files">Array of files uploaded by the client.</param>
     /// <returns>OK result with upload directory path on success,
     /// BadRequest if no files were provided.</returns>
-    [HttpPost("upload")]
+    [HttpPost]
     public async Task<IActionResult> Upload(IFormFile[] files)
     {
         if (files == null || files.Length == 0)
@@ -76,8 +76,8 @@ public class HomeController : Controller
     /// <param name="body">JSON body containing the upload directory path.</param>
     /// <returns>OK result with test execution report on success,
     /// BadRequest if the upload directory is invalid or doesn't exist.</returns>
-    [HttpPost("run")]
-    public async Task<IActionResult> RunTests([FromBody] JsonElement body)
+    [HttpPost]
+    public async Task<IActionResult> Run([FromBody] JsonElement body)
     {
         var uploadDir = body.GetProperty("uploadDir").GetString();
         if (string.IsNullOrEmpty(uploadDir) || !Directory.Exists(uploadDir))
@@ -91,7 +91,7 @@ public class HomeController : Controller
         var results = reporter.Results;
         if (results == null || results.Count == 0)
         {
-            return this.Ok(new { success = true, message = "No tests found." });
+            return this.Ok(new { success = true, message = "No tests found.", reports = new object[0] });
         }
 
         var groups = results!.GroupBy(r => r.AssemblyName);
@@ -159,7 +159,7 @@ public class HomeController : Controller
     /// Retrieves the history of all test runs from the database.
     /// </summary>
     /// <returns>OK result with list of test run summaries, ordered by most recent first.</returns>
-    [HttpGet("history")]
+    [HttpGet]
     public async Task<IActionResult> GetHistory()
     {
         var history = await this.history.Assemblies
