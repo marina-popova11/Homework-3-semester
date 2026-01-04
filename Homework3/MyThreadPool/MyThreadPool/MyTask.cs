@@ -4,13 +4,17 @@
 
 namespace MyThreadPool;
 
+/// <summary>
+/// Represents an asynchronous task that can be executed by a thread pool.
+/// </summary>
+/// <typeparam name="TResult">The type of the result produced by the task.</typeparam>
 internal class MyTask<TResult> : IMyTask<TResult>
 {
     private readonly object lockObject = new object();
     private readonly Func<TResult> function;
-    private TResult result = default!;
+    private TResult? result;
     private volatile bool isCompleted = false;
-    private Exception exception = null!;
+    private Exception? exception = null;
     private MyyThreadPool threadPool;
     private List<Action> followingTasks = new();
 
@@ -19,12 +23,12 @@ internal class MyTask<TResult> : IMyTask<TResult>
     /// </summary>
     /// <param name="function">The function given for calculating.</param>
     /// <param name="threadPool">The thread pool.</param>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="function"/> or <paramref name="threadPool"/> is <c>null</c>.</exception>
     public MyTask(Func<TResult> function, MyyThreadPool threadPool)
     {
-        if (function == null || threadPool == null)
-        {
-            throw new ArgumentNullException(nameof(function));
-        }
+        ArgumentNullException.ThrowIfNull(function);
+        ArgumentNullException.ThrowIfNull(threadPool);
 
         this.function = function;
         this.threadPool = threadPool;
@@ -61,7 +65,7 @@ internal class MyTask<TResult> : IMyTask<TResult>
                 throw new AggregateException("Task failed", this.exception);
             }
 
-            return this.result;
+            return this.result!;
         }
     }
 
@@ -72,15 +76,14 @@ internal class MyTask<TResult> : IMyTask<TResult>
     /// to the result of a given task X and returns a new task Y that has been
     /// accepted for execution.</param>
     /// <returns>Element that can itself become a new task.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="nextFunction"/> is <c>null</c>.</exception>
     /// <exception cref="InvalidOperationException">If thread pool is shut down.</exception>
     public IMyTask<TNewResult> ContinueWith<TNewResult>(Func<TResult, TNewResult> nextFunction)
     {
-        if (nextFunction == null)
-        {
-            throw new ArgumentNullException(nameof(nextFunction));
-        }
+        ArgumentNullException.ThrowIfNull(nextFunction);
 
-        if (this.threadPool.IsShitDown())
+        if (this.threadPool.IsShutdown)
         {
             throw new InvalidOperationException("Thread pool is shut down.");
         }

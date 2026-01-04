@@ -5,13 +5,13 @@
 namespace MyThreadPool;
 
 /// <summary>
-/// Class for interface My Task.
+/// Interface My Task.
 /// </summary>
 /// <typeparam name="TResult">The type of data.</typeparam>
 public interface IMyTask<TResult>
 {
     /// <summary>
-    /// Gets a value indicating whether. Return true if the task is completed.
+    /// Gets a value indicating whether the task has completed execution.
     /// </summary>
     bool IsCompleted { get; }
 
@@ -21,7 +21,7 @@ public interface IMyTask<TResult>
     TResult Result { get; }
 
     /// <summary>
-    /// Returns an element that can itself become a new task.
+    /// Creates a continuation task that executes asynchronously when the current task completes.
     /// </summary>
     /// <typeparam name="TNewResult">The type of data received at the end of the task.</typeparam>
     /// <param name="func">An object of type Func that can be applied

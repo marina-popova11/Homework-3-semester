@@ -9,7 +9,6 @@ using System.Collections.Concurrent;
 /// <summary>
 /// Class for thread pool.
 /// </summary>
-// / <typeparam name="TResult">The type of result data.</typeparam>
 public class MyyThreadPool : IDisposable
 {
     private readonly ManualResetEventSlim manualResetEvent = new(false);
@@ -17,24 +16,19 @@ public class MyyThreadPool : IDisposable
     private readonly object lockObject = new object();
     private readonly CancellationTokenSource cts;
     private ConcurrentQueue<Action> taskQueue;
-    private int numberThreads;
     private int activeThreads;
-    private volatile bool isShutDown = false;
+    private volatile bool isShutdown = false;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MyyThreadPool"/> class.
     /// </summary>
     /// <param name="numberThreads">The number of threads for simultaneous operation.</param>
-    /// <exception cref="ArgumentNullException">If number of threads is null.</exception>
+    /// <exception cref="InvalidOperationException">If number of threads is less than or equal to zero.</exception>
     public MyyThreadPool(int numberThreads)
     {
-        if (numberThreads <= 0)
-        {
-            throw new ArgumentNullException(nameof(numberThreads));
-        }
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(numberThreads, 0);
 
         this.threads = new Thread[numberThreads];
-        this.numberThreads = numberThreads;
         this.cts = new();
         this.taskQueue = new();
         this.activeThreads = 0;
@@ -47,33 +41,45 @@ public class MyyThreadPool : IDisposable
     }
 
     /// <summary>
-    /// Indicates whether there was a signal to end the work.
+    /// Gets a value indicating whether the thread pool has been shut down.
     /// </summary>
     /// <returns>True or false.</returns>
-    public bool IsShitDown() => this.isShutDown;
+    public bool IsShutdown => this.isShutdown;
 
     /// <summary>
     /// Shuts down threads.
     /// </summary>
-    public void ShutDown()
+    public void Shutdown()
     {
         lock (this.lockObject)
         {
-            if (this.isShutDown)
+            if (this.isShutdown)
             {
                 return;
             }
 
-            this.isShutDown = true;
+            this.isShutdown = true;
         }
 
-        this.cts.Cancel();
         this.manualResetEvent.Set();
-
         foreach (var thread in this.threads)
         {
             thread.Join();
         }
+
+        while (this.taskQueue.TryDequeue(out var task))
+        {
+            try
+            {
+                task();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Task failed during shutdown: {ex.Message}");
+            }
+        }
+
+        this.cts.Cancel();
     }
 
     /// <summary>
@@ -86,21 +92,28 @@ public class MyyThreadPool : IDisposable
     /// <exception cref="ArgumentNullException">If function is null.</exception>
     public IMyTask<TResult> Submit<TResult>(Func<TResult> function)
     {
-        if (function == null)
-        {
-            throw new ArgumentNullException(nameof(function));
-        }
+        ArgumentNullException.ThrowIfNull(function);
 
         lock (this.lockObject)
         {
-            if (this.isShutDown)
+            if (this.isShutdown)
             {
                 throw new InvalidOperationException("Thread pool is shut down.");
             }
         }
 
         var task = new MyTask<TResult>(function, this);
-        this.EnqueueTask(() => task.Run());
+        lock (this.lockObject)
+        {
+            if (this.isShutdown)
+            {
+                throw new InvalidOperationException("Thread pool is shut down.");
+            }
+
+            this.EnqueueTask(() => task.Run());
+        }
+
+        this.manualResetEvent.Set();
         return task;
     }
 
@@ -110,12 +123,18 @@ public class MyyThreadPool : IDisposable
     /// <param name="task">Current task.</param>
     public void EnqueueTask(Action task)
     {
-        if (this.isShutDown || this.cts.Token.IsCancellationRequested)
+        ArgumentNullException.ThrowIfNull(task);
+
+        lock (this.lockObject)
         {
-            throw new InvalidOperationException("Thread pool is shut down.");
+            if (this.isShutdown)
+            {
+                throw new InvalidOperationException("Thread pool is shut down.");
+            }
+
+            this.taskQueue.Enqueue(task);
         }
 
-        this.taskQueue.Enqueue(task);
         this.manualResetEvent.Set();
     }
 
@@ -124,15 +143,23 @@ public class MyyThreadPool : IDisposable
     /// </summary>
     public void Dispose()
     {
-        this.ShutDown();
+        this.Shutdown();
         this.cts.Dispose();
         this.manualResetEvent.Dispose();
     }
 
     private void Run()
     {
-        while (!this.isShutDown && !this.cts.Token.IsCancellationRequested)
+        while (true)
         {
+            lock (this.lockObject)
+            {
+                if (this.isShutdown && this.taskQueue.IsEmpty)
+                {
+                    break;
+                }
+            }
+
             if (this.taskQueue.TryDequeue(out var taskRun))
             {
                 Interlocked.Increment(ref this.activeThreads);
