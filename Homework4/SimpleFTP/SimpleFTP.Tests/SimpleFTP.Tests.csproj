@@ -34,4 +34,10 @@
     <AdditionalFiles Include="../stylecop.json" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="test\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

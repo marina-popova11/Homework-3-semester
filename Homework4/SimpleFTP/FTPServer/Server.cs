@@ -11,9 +11,10 @@ using System.Threading.Tasks;
 /// <summary>
 /// Class for ftp server.
 /// </summary>
-public class Server
+public class Server : IAsyncDisposable
 {
     private TcpListener listener;
+    private List<Task> activeClients = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Server"/> class.
@@ -23,19 +24,59 @@ public class Server
     public Server(IPAddress address, int port)
     {
         this.listener = new TcpListener(address, port);
-        this.listener.Start();
     }
 
     /// <summary>
     /// Starts the server operation.
     /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Completed task.</returns>
-    public async Task Run()
+    public async Task RunAsync(CancellationToken cancellationToken = default)
     {
-        while (true)
+        this.listener.Start();
+
+        try
         {
-            var client = this.listener.AcceptTcpClient();
-            _ = Task.Run(async () => this.HandleClient(client));
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                TcpClient? client = null;
+
+                try
+                {
+                    client = await this.listener.AcceptTcpClientAsync(cancellationToken);
+                    var clientTask = this.HandleClientAsync(client, cancellationToken);
+                    lock (this.activeClients)
+                    {
+                        this.activeClients.Add(clientTask);
+                    }
+
+                    _ = clientTask.ContinueWith(
+                        t =>
+                    {
+                        lock (this.activeClients)
+                        {
+                            this.activeClients.Remove(t);
+                        }
+                    },
+                        TaskScheduler.Default);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error accepting client: {ex.Message}");
+                    client?.Close();
+                }
+            }
+        }
+        finally
+        {
+            await this.WaitForClientsToCompleteAsync();
+
+            this.listener.Stop();
+            Console.WriteLine("Server stopped.");
         }
     }
 
@@ -43,8 +84,9 @@ public class Server
     /// Handles client requests.
     /// </summary>
     /// <param name="client">Tcp client.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Completed task.</returns>
-    public async Task HandleClient(TcpClient client)
+    public async Task HandleClientAsync(TcpClient client, CancellationToken cancellationToken = default)
     {
         using (client)
         using (var stream = client.GetStream())
@@ -53,15 +95,15 @@ public class Server
         {
             try
             {
-                while (client.Connected)
+                while (client.Connected && !cancellationToken.IsCancellationRequested)
                 {
-                    var request = await reader.ReadLineAsync();
+                    var request = await reader.ReadLineAsync(cancellationToken);
                     if (string.IsNullOrEmpty(request))
                     {
                         continue;
                     }
 
-                    await this.ProcessRequest(request, client, writer);
+                    await this.ProcessRequest(request, client, writer, cancellationToken);
                 }
             }
             catch (Exception ex)
@@ -77,23 +119,32 @@ public class Server
     /// <param name="request">The request from client.</param>
     /// <param name="client">Tcp client.</param>
     /// <param name="writer">the writer to record the results.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>completed task.</returns>
-    public async Task ProcessRequest(string request, TcpClient client, StreamWriter writer)
+    public async Task ProcessRequest(string request, TcpClient client, StreamWriter writer, CancellationToken cancellationToken = default)
     {
         var parts = request.Split(' ');
+        if (parts.Length < 2)
+        {
+            await writer.WriteLineAsync("Command error: invalid format");
+            await writer.FlushAsync();
+            return;
+        }
+
         var command = parts[0];
         var path = parts[1];
 
         switch (command)
         {
             case "1":
-                await this.HandlerList(path, writer);
+                await this.HandleListAsync(path, writer, cancellationToken);
                 break;
             case "2":
-                await this.HandlerGet(path, client, writer);
+                await this.HandleGetAsync(path, client, writer, cancellationToken);
                 break;
             default:
                 await writer.WriteLineAsync("Command error!");
+                await writer.FlushAsync();
                 break;
         }
     }
@@ -104,31 +155,34 @@ public class Server
     /// <param name="path">the path to file/directory.</param>
     /// <param name="client">Tcp client.</param>
     /// <param name="writer">the writer to record the results.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>completed task.</returns>
-    public async Task HandlerGet(string path, TcpClient client, StreamWriter writer)
+    public async Task HandleGetAsync(string path, TcpClient client, StreamWriter writer, CancellationToken cancellationToken = default)
     {
         try
         {
             var stream = client.GetStream();
             if (!File.Exists(path))
             {
-                await writer.WriteAsync("-1");
+                var messageEr = "-1" + Environment.NewLine;
+                await writer.WriteAsync(messageEr.AsMemory(), cancellationToken);
                 await writer.FlushAsync();
                 return;
             }
 
             var fileInfo = new FileInfo(path);
             long size = fileInfo.Length;
-            await writer.WriteAsync($"{size} ");
+            var message = $"{size} " + Environment.NewLine;
+            await writer.WriteAsync(message.AsMemory(), cancellationToken);
             await writer.FlushAsync();
 
             using (var fileStream = File.OpenRead(path))
             {
                 var buffer = new byte[4096];
                 var allBytes = 0;
-                while ((allBytes = await fileStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                while ((allBytes = await fileStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
                 {
-                    await stream.WriteAsync(buffer, 0, allBytes);
+                    await stream.WriteAsync(buffer, 0, allBytes, cancellationToken);
                 }
 
                 await stream.FlushAsync();
@@ -137,7 +191,8 @@ public class Server
         catch (Exception ex)
         {
             Console.WriteLine($"Get error: {ex.Message}");
-            await writer.WriteAsync("-1");
+            var messageEr = "-1" + Environment.NewLine;
+            await writer.WriteLineAsync(messageEr.AsMemory(), cancellationToken);
             await writer.FlushAsync();
         }
     }
@@ -147,14 +202,16 @@ public class Server
     /// </summary>
     /// <param name="path">the path to file/directory.</param>
     /// <param name="writer">the writer to record the results.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>completed task.</returns>
-    public async Task HandlerList(string path, StreamWriter writer)
+    public async Task HandleListAsync(string path, StreamWriter writer, CancellationToken cancellationToken = default)
     {
         try
         {
             if (!Directory.Exists(path))
             {
-                await writer.WriteAsync("-1");
+                var messageEr = "-1" + Environment.NewLine;
+                await writer.WriteAsync(messageEr.AsMemory(), cancellationToken);
                 await writer.FlushAsync();
                 return;
             }
@@ -164,19 +221,48 @@ public class Server
             foreach (var file in files)
             {
                 var isDir = (File.GetAttributes(file) & FileAttributes.Directory) == FileAttributes.Directory;
-                responseParts.Add(file);
+                responseParts.Add(Path.GetFileName(file));
                 responseParts.Add(isDir.ToString().ToLower());
             }
 
             var response = string.Join(' ', responseParts);
-            await writer.WriteLineAsync(response);
+            var message = response + Environment.NewLine;
+            await writer.WriteLineAsync(message.AsMemory(), cancellationToken);
             await writer.FlushAsync();
         }
         catch (Exception ex)
         {
             Console.WriteLine($"List error: {ex.Message}");
-            await writer.WriteLineAsync("-1");
+            var messageEr = "-1" + Environment.NewLine;
+            await writer.WriteLineAsync(messageEr.AsMemory(), cancellationToken);
             await writer.FlushAsync();
+        }
+    }
+
+    /// <summary>
+    /// Disposes the server resources.
+    /// </summary>
+    /// <returns>A value task representing the asynchronous dispose operation.</returns>
+    public async ValueTask DisposeAsync()
+    {
+        this.listener.Stop();
+
+        await this.WaitForClientsToCompleteAsync();
+        GC.SuppressFinalize(this);
+    }
+
+    private async Task WaitForClientsToCompleteAsync()
+    {
+        Task[] tasks;
+        lock (this.activeClients)
+        {
+            tasks = this.activeClients.ToArray();
+        }
+
+        if (tasks.Length > 0)
+        {
+            Console.WriteLine($"Waiting for {tasks.Length} client(s) to finish...");
+            await Task.WhenAll(tasks);
         }
     }
 }

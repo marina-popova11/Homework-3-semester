@@ -14,16 +14,13 @@ public class ClientTests
     private Client client;
 
     [SetUp]
-    public void SetUp()
-    {
-        this.client = new();
-    }
+    public void SetUp() => this.client = new();
 
     [OneTimeSetUp]
     public void StartServer()
     {
         var server = new Server(IPAddress.Loopback, 8888);
-        _ = Task.Run(async () => await server.Run());
+        _ = Task.Run(async () => await server.RunAsync());
     }
 
     [Test]
@@ -35,8 +32,8 @@ public class ClientTests
     [Test]
     public async Task Test_IsConnected_ReturnTrue()
     {
-        await this.client.Connect(IPAddress.Loopback, 8888);
-        var result = this.client.IsConnect();
+        await this.client.ConnectAsync(IPAddress.Loopback, 8888);
+        var result = this.client.IsConnect;
         Assert.That(result, Is.True);
         await this.client.Disconnect();
     }
@@ -44,16 +41,14 @@ public class ClientTests
     [Test]
     public void Test_CommandList_IfClientDoesNotConnect()
     {
-        // await this.client.Connect(IPAddress.Loopback, 8888);
-        // var path = "directory.txt";
-        var result = Assert.ThrowsAsync<InvalidOperationException>(async () => await this.client.CommandList("C:\\Temp"));
-        Assert.That(result.Message, Does.Contain("Client does not connect!"));
+        var result = Assert.ThrowsAsync<InvalidOperationException>(async () => await this.client.CommandListAsync("C:\\Temp"));
+        Assert.That(result.Message, Does.Contain("Client is not connected!"));
     }
 
     [Test]
     public void Test_CommandGet_IfClientDoesNotConnect()
     {
-        var result = Assert.ThrowsAsync<InvalidOperationException>(async () => await this.client.CommandGet("C:\\Temp", "C:\\Temp"));
-        Assert.That(result.Message, Does.Contain("Client does not connect!"));
+        var result = Assert.ThrowsAsync<InvalidOperationException>(async () => await this.client.CommandGetAsync("C:\\Temp", "C:\\Temp"));
+        Assert.That(result.Message, Does.Contain("Client is not connected!"));
     }
 }

@@ -26,7 +26,7 @@ try
 {
     Console.WriteLine("Start");
     var server = new Server(ip, port);
-    await server.Run();
+    await server.RunAsync();
 }
 catch (Exception ex)
 {

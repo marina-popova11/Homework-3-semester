@@ -14,12 +14,12 @@ using System.Threading.Tasks;
 /// you can listing files and
 /// get a file from server.
 /// </summary>
-public class Client
+public class Client : IAsyncDisposable
 {
-    private TcpClient client;
-    private Stream stream = null!;
-    private StreamWriter writer = null!;
-    private StreamReader reader = null!;
+    private TcpClient? client;
+    private Stream? stream;
+    private StreamWriter? writer;
+    private StreamReader? reader;
     private bool isConnected;
 
     /// <summary>
@@ -34,23 +34,24 @@ public class Client
     }
 
     /// <summary>
-    /// Gets flag for isConnected.
+    /// Gets a value indicating whether the client is connected.
     /// </summary>
     /// <returns>True or false.</returns>
-    public bool IsConnect() => this.isConnected;
+    public bool IsConnect => this.isConnected;
 
     /// <summary>
     /// Connects the client to the server.
     /// </summary>
     /// <param name="ip">Ip address for connect to.</param>
     /// <param name="port">Port number for connect to.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Completed task.</returns>
-    public async Task Connect(IPAddress ip, int port)
+    public async Task ConnectAsync(IPAddress ip, int port, CancellationToken cancellationToken = default)
     {
-        await this.client.ConnectAsync(ip, port);
+        await this.client!.ConnectAsync(ip, port, cancellationToken);
         this.stream = this.client.GetStream();
-        this.writer = new StreamWriter(this.stream);
-        this.reader = new StreamReader(this.stream);
+        this.writer = new StreamWriter(this.stream, Encoding.UTF8, bufferSize: 4096, leaveOpen: true);
+        this.reader = new StreamReader(this.stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: 4096, leaveOpen: true);
         this.isConnected = true;
     }
 
@@ -58,22 +59,25 @@ public class Client
     /// Viewing files in a directory on the server.
     /// </summary>
     /// <param name="path">What the file will be viewed.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>List of files in directory.</returns>
-    /// <exception cref="InvalidOperationException">If client does not connect/ directory not found/ size is not correct/
+    /// <exception cref="InvalidOperationException">If client does not connect/ size is not correct/
     /// server return incomplete response.</exception>
-    public async Task<List<MyFileInfo>> CommandList(string path)
+    /// <exception cref="DirectoryNotFoundException">If directory not found.</exception>
+    public async Task<List<MyFileInfo>> CommandListAsync(string path, CancellationToken cancellationToken = default)
     {
-        if (!this.IsConnect())
+        if (!this.IsConnect)
         {
-            throw new InvalidOperationException("Client does not connect!");
+            throw new InvalidOperationException("Client is not connected!");
         }
 
-        await this.writer.WriteLineAsync($"1 {path}");
+        var message = $"1 {path}" + Environment.NewLine;
+        await this.writer!.WriteAsync(message.AsMemory(), cancellationToken);
         await this.writer.FlushAsync();
-        var response = await this.reader.ReadLineAsync();
+        var response = await this.reader!.ReadLineAsync(cancellationToken);
         if (response == "-1")
         {
-            throw new InvalidOperationException($"Directory not found at path: {path}");
+            throw new DirectoryNotFoundException($"Directory not found at path: {path}");
         }
 
         var parts = response!.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -112,22 +116,24 @@ public class Client
     /// </summary>
     /// <param name="path">What the file will be copy.</param>
     /// <param name="localPath">Where file will be download to.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if file was successfully downloaded, false overwise.</returns>
     /// <exception cref="InvalidOperationException">If client does not connect/ server disconnected before sending size/
     /// file not found.</exception>
-    public async Task<bool> CommandGet(string path, string localPath)
+    public async Task<bool> CommandGetAsync(string path, string localPath, CancellationToken cancellationToken = default)
     {
-        if (!this.IsConnect())
+        if (!this.IsConnect)
         {
-            throw new InvalidOperationException("Client does not connect!");
+            throw new InvalidOperationException("Client is not connected!");
         }
 
-        await this.writer.WriteLineAsync($"2 {path}");
+        var message = $"2 {path}" + Environment.NewLine;
+        await this.writer!.WriteAsync(message.AsMemory(), cancellationToken);
         await this.writer.FlushAsync();
         var size = new StringBuilder();
         while (true)
         {
-            int b = this.stream.ReadByte();
+            int b = this.stream!.ReadByte();
             if (b == -1)
             {
                 throw new InvalidOperationException($"Server disconnected before sending size.");
@@ -162,14 +168,14 @@ public class Client
                 var bytesRead = await this.stream.ReadAsync(buffer, 0, remainingBytes);
                 if (bytesRead == 0)
                 {
-                    throw new IOException("Connect close before file was fully.");
+                    throw new IOException("The connection was lost before the file was fully downloaded.");
                 }
 
-                await localFile.WriteAsync(buffer, 0, bytesRead);
+                await localFile.WriteAsync(buffer, 0, bytesRead, cancellationToken);
                 allBytes += remainingBytes;
             }
 
-            await localFile.FlushAsync();
+            await localFile.FlushAsync(cancellationToken);
             return allBytes == fileSize;
         }
     }
@@ -178,12 +184,49 @@ public class Client
     /// Terminates the client's work.
     /// </summary>
     /// <returns>Completed task.</returns>
-    public async Task Disconnect()
+    public ValueTask Disconnect()
     {
-        this.reader.Close();
-        this.writer.Close();
-        this.stream.Close();
-        this.client.Close();
+        // if (!this.isConnected)
+        // {
+        //     return;
+        // }
+
+        // this.reader?.Dispose();
+        // this.writer?.Dispose();
+        // this.stream?.Dispose();
+        // this.client?.Close();
+
+        // this.reader = null;
+        // this.writer = null;
+        // this.stream = null;
+        // this.client = null;
+        // this.isConnected = false;
+        if (!this.isConnected)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        this.reader?.Dispose();
+        this.writer?.Dispose();
+        this.client?.Close();
+
+        this.reader = null;
+        this.writer = null;
+        this.stream = null;
+        this.client = null;
+        this.isConnected = false;
+
+        return ValueTask.CompletedTask;
+    }
+
+    /// <summary>
+    /// Implementation of IAsyncDisposable.
+    /// </summary>
+    /// <returns>A ValueTask that represents the asynchronous dispose operation.</returns>
+    public async ValueTask DisposeAsync()
+    {
+        await this.Disconnect();
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>

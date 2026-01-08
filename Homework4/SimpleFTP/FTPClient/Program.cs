@@ -25,7 +25,7 @@ if (!int.TryParse(args[1], out var port))
 }
 
 var client = new Client();
-await client.Connect(ip, port);
+await client.ConnectAsync(ip, port);
 var listCommand = "1";
 var getCommand = "2";
 var exitCommand = "exit";
@@ -37,7 +37,7 @@ try
         Console.WriteLine("Enter the command");
         Console.WriteLine($"{listCommand} - for listing files.");
         Console.WriteLine($"{getCommand} - for getting file.");
-        Console.WriteLine($"{exitCommand} - for getting file.");
+        Console.WriteLine($"{exitCommand} - for exit.");
         var command = Console.ReadLine();
         switch (command)
         {
@@ -45,7 +45,13 @@ try
                 {
                     Console.WriteLine("Enter the path: ");
                     var path = Console.ReadLine();
-                    var response = await client.CommandList(path!);
+                    if (path == null)
+                    {
+                        Console.WriteLine("The path you entered is empty. Please enter the correct path.");
+                        return;
+                    }
+
+                    var response = await client.CommandListAsync(path);
                     if (response.Count == 0)
                     {
                         Console.WriteLine("Directory is empty.");
@@ -66,10 +72,22 @@ try
             case "2":
                 {
                     Console.WriteLine("Enter the path: ");
-                    var path = Console.ReadLine();
+                    var remotePath = Console.ReadLine();
+                    if (remotePath == null)
+                    {
+                        Console.WriteLine("The path you entered is empty. Please enter the correct path.");
+                        return;
+                    }
+
                     Console.WriteLine("Enter the path where file will be download to: ");
-                    var part2 = Console.ReadLine();
-                    var response = await client.CommandGet(path!, part2!);
+                    var localPath = Console.ReadLine();
+                    if (localPath == null)
+                    {
+                        Console.WriteLine("The path you entered is empty. Please enter the correct path.");
+                        return;
+                    }
+
+                    var response = await client.CommandGetAsync(remotePath, localPath);
                     Console.WriteLine("File was copied.");
                     break;
                 }
