@@ -29,7 +29,7 @@ public class Client : IAsyncDisposable
     /// <param name="port">Port number for connect to.</param>
     public Client()
     {
-        this.client = new TcpClient();
+        this.client = new TcpClient(AddressFamily.InterNetwork);
         this.isConnected = false;
     }
 

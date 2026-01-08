@@ -19,7 +19,7 @@ public class ClientTests
     [OneTimeSetUp]
     public void StartServer()
     {
-        var server = new Server(IPAddress.Loopback, 8888);
+        var server = new Server(IPAddress.Any, 8888);
         _ = Task.Run(async () => await server.RunAsync());
     }
 
@@ -32,7 +32,7 @@ public class ClientTests
     [Test]
     public async Task Test_IsConnected_ReturnTrue()
     {
-        await this.client.ConnectAsync(IPAddress.Loopback, 8888);
+        await this.client.ConnectAsync(IPAddress.Parse("127.0.0.1"), 8888);
         var result = this.client.IsConnect;
         Assert.That(result, Is.True);
         await this.client.Disconnect();

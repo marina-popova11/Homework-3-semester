@@ -40,18 +40,17 @@ public class ServerTests
         tempListener.Stop();
 
         this.cts = new CancellationTokenSource();
-        this.server = new Server(IPAddress.Loopback, this.serverPort);
+        this.server = new Server(IPAddress.Any, this.serverPort);
         _ = this.server.RunAsync(this.cts.Token);
 
-        // Task.Delay(100).Wait();
         var retry = 0;
         const int maxRetries = 20;
         while (retry++ < maxRetries)
         {
-            using var client = new TcpClient();
+            using var client = new TcpClient(AddressFamily.InterNetwork);
             try
             {
-                await client.ConnectAsync(IPAddress.Loopback, this.serverPort);
+                await client.ConnectAsync(IPAddress.Parse("127.0.0.1"), this.serverPort);
                 break;
             }
             catch
@@ -84,7 +83,7 @@ public class ServerTests
         var client = new Client();
         try
         {
-            await client.ConnectAsync(IPAddress.Loopback, this.serverPort);
+            await client.ConnectAsync(IPAddress.Parse("127.0.0.1"), this.serverPort);
             var files = await client.CommandListAsync(testDirPath);
 
             Assert.That(files.Count, Is.GreaterThan(0));
@@ -103,7 +102,7 @@ public class ServerTests
         var client = new Client();
         try
         {
-            await client.ConnectAsync(IPAddress.Loopback, this.serverPort);
+            await client.ConnectAsync(IPAddress.Parse("127.0.0.1"), this.serverPort);
             var files = await client.CommandListAsync(emptyDirPath);
             Assert.That(files.Count, Is.EqualTo(0));
         }
