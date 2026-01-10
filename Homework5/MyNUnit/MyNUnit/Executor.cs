@@ -17,32 +17,22 @@ public class Executor
     /// <summary>
     /// Initializes a new instance of the <see cref="Executor"/> class.
     /// </summary>
-    public Executor()
-    {
-        this.classRunner = new TestClassRunner();
-    }
+    public Executor() => this.classRunner = new TestClassRunner();
 
     /// <summary>
     /// Runs a TestClassRunner for each class.
     /// </summary>
     /// <param name="testClass">Test class for execute.</param>
     /// <returns>Execution results.</returns>
-    public List<Reporter.TestResult> TestExecutor(List<TestClassInfo> testClass)
+    public List<Reporter.TestResult> TestExecute(List<TestClassInfo> testClass)
     {
         var results = new List<Reporter.TestResult>();
         Parallel.ForEach(testClass, classInfo =>
         {
-            try
+            var classResults = this.classRunner.RunTests(classInfo);
+            lock (results)
             {
-                var classResults = this.classRunner.RunTests(classInfo);
-                lock (results)
-                {
-                    results.AddRange(classResults);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error: {ex.Message}");
+                results.AddRange(classResults);
             }
         });
 
@@ -50,56 +40,108 @@ public class Executor
     }
 
     /// <summary>
-    /// manages the lifecycle of tests within a single class.
+    /// Manages the lifecycle of tests within a single class.
     /// </summary>
     private class TestClassRunner
     {
         public List<Reporter.TestResult> RunTests(TestClassInfo classInfo)
         {
-            var result = new List<Reporter.TestResult>();
-            this.RunBeforeClassMethods(classInfo);
-            foreach (var method in classInfo.TestMethods!)
+            if (classInfo.ClassType == null)
             {
-                var testResult = this.RunSingleTest(classInfo, method);
-                result.Add(testResult);
+                throw new InvalidOperationException(nameof(classInfo));
             }
 
-            this.RunAfterClassMethods(classInfo);
+            var result = new List<Reporter.TestResult>();
+            this.RunBeforeClassMethods(classInfo);
+            if (classInfo.TestMethods == null)
+            {
+                return result;
+            }
+
+            var testResults = new List<Reporter.TestResult>();
+            Parallel.ForEach(classInfo.TestMethods, method =>
+            {
+                var testResult = this.RunSingleTest(classInfo, method);
+                lock (testResults)
+                {
+                    testResults.Add(testResult);
+                }
+            });
+
+            result.AddRange(testResults);
+            try
+            {
+                this.RunAfterClassMethods(classInfo);
+            }
+            catch
+            {
+            }
+
             return result;
         }
 
         public Reporter.TestResult RunSingleTest(TestClassInfo classInfo, MethodInfo method)
         {
-            var testInfo = new Reporter.TestResult
-            {
-                Name = method.Name,
-                ClassName = classInfo.ClassType!.Name,
-            };
+            var status = Reporter.Status.Passed;
+            string? error = null;
+            object? testInstance = null;
 
-            object testInstance = null!;
+            if (classInfo.ClassType == null)
+            {
+                throw new InvalidOperationException(nameof(classInfo));
+            }
+
             try
             {
-                testInstance = Activator.CreateInstance(classInfo.ClassType)!;
+                testInstance = Activator.CreateInstance(classInfo.ClassType) ?? throw new InvalidOperationException(nameof(testInstance));
                 this.RunBeforeMethods(classInfo, testInstance);
                 method.Invoke(testInstance, null);
-                testInfo.Status = Reporter.Status.Passed;
+            }
+            catch (TargetInvocationException ex)
+            {
+                status = Reporter.Status.Failed;
+                error = ex.InnerException?.Message ?? ex.Message;
             }
             catch (Exception ex)
             {
-                testInfo.Status = Reporter.Status.Failed;
-                testInfo.Error = ex.Message;
+                status = Reporter.Status.Failed;
+                error = ex.Message;
             }
             finally
             {
-                this.RunAfterMethods(classInfo, testInstance);
+                if (testInstance != null)
+                {
+                    try
+                    {
+                        this.RunAfterMethods(classInfo, testInstance);
+                    }
+                    catch (Exception afterEx)
+                    {
+                        error = error == null
+                            ? $"After method failed: {afterEx.Message}"
+                            : $"{error}; After failed: {afterEx.Message}";
+                        status = Reporter.Status.Failed;
+                    }
+                }
             }
+
+            var testInfo = new Reporter.TestResult(
+                Name: method.Name,
+                ClassName: classInfo.ClassType!.Name,
+                Status: status,
+                Error: error);
 
             return testInfo;
         }
 
         public void RunBeforeClassMethods(TestClassInfo classInfo)
         {
-            foreach (var method in classInfo.BeforeClassMethods!)
+            if (classInfo.BeforeClassMethods == null)
+            {
+                return;
+            }
+
+            foreach (var method in classInfo.BeforeClassMethods)
             {
                 try
                 {
@@ -114,7 +156,12 @@ public class Executor
 
         public void RunAfterClassMethods(TestClassInfo classInfo)
         {
-            foreach (var method in classInfo.AfterClassMethods!)
+            if (classInfo.AfterClassMethods == null)
+            {
+                return;
+            }
+
+            foreach (var method in classInfo.AfterClassMethods)
             {
                 try
                 {
@@ -129,17 +176,30 @@ public class Executor
 
         public void RunAfterMethods(TestClassInfo classInfo, object testInstance)
         {
-            foreach (var method in classInfo.AfterMethods!)
-            {
-                method.Invoke(testInstance, null);
-            }
+            this.InvokeMethods(classInfo.AfterMethods, testInstance);
         }
 
         public void RunBeforeMethods(TestClassInfo classInfo, object testInstance)
         {
-            foreach (var method in classInfo.BeforeMethods!)
+            this.InvokeMethods(classInfo.BeforeMethods, testInstance);
+        }
+
+        private void InvokeMethods(IEnumerable<MethodInfo>? methods, object? instance)
+        {
+            if (methods == null)
             {
-                method.Invoke(testInstance, null);
+                return;
+            }
+
+            foreach (var method in methods)
+            {
+                try
+                {
+                    method.Invoke(instance, null);
+                }
+                catch
+                {
+                }
             }
         }
     }

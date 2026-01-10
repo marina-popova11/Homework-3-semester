@@ -6,18 +6,26 @@ namespace MyNUnit.Tests;
 
 using MyNUnit;
 
-// using MyNUnit.FakeTests;
 [TestFixture]
 public class TestRunner
 {
+    private Searcher searcher;
+    private Executor executor;
+    private string assemblyPath;
+
+    [SetUp]
+    public void SetUp()
+    {
+        this.searcher = new Searcher();
+        this.executor = new Executor();
+        this.assemblyPath = this.GetFakeTestsAssemblyPath();
+    }
+
     [Test]
     public void Test_ExecutorRunsPassingTests()
     {
-        var searcher = new Searcher();
-        var executor = new Executor();
-        var assemblyPath = this.GetFakeTestsAssemblyPath();
-        var classes = searcher.TestSearcher(assemblyPath);
-        var results = executor.TestExecutor(classes);
+        var classes = this.searcher.TestSearch(this.assemblyPath!);
+        var results = this.executor.TestExecute(classes);
         var simpleResults = results.Where(r => r.ClassName == "SimpleTests").ToList();
         Assert.That(simpleResults.Count(), Is.EqualTo(3));
         Assert.That(simpleResults.All(r => r.Status == Reporter.Status.Passed));
@@ -26,11 +34,8 @@ public class TestRunner
     [Test]
     public void Test_ExecutorRunsFailingTests()
     {
-        var searcher = new Searcher();
-        var executor = new Executor();
-        var assemblyPath = this.GetFakeTestsAssemblyPath();
-        var classes = searcher.TestSearcher(assemblyPath);
-        var results = executor.TestExecutor(classes);
+        var classes = this.searcher.TestSearch(this.assemblyPath!);
+        var results = this.executor.TestExecute(classes);
         var failingResults = results.Where(r => r.ClassName == "FailedTests").ToList();
         Assert.That(failingResults.Count(), Is.EqualTo(2));
         Assert.That(failingResults.All(r => r.Status == Reporter.Status.Failed));
@@ -39,12 +44,9 @@ public class TestRunner
     [Test]
     public void Test_ReporterCollectResults()
     {
-        var searcher = new Searcher();
-        var executor = new Executor();
         var reporter = new Reporter();
-        var assemblyPath = this.GetFakeTestsAssemblyPath();
-        var classes = searcher.TestSearcher(assemblyPath);
-        var results = executor.TestExecutor(classes);
+        var classes = this.searcher.TestSearch(this.assemblyPath!);
+        var results = this.executor.TestExecute(classes);
         var report = reporter.CreateReport(results);
 
         Assert.That(report.Results?.Count, Is.EqualTo(5));
@@ -55,8 +57,7 @@ public class TestRunner
     public void Test_Runner()
     {
         var runner = new Runner();
-        var assemblyPath = this.GetFakeTestsAssemblyPath();
-        var report = runner.TestRunner(Path.GetDirectoryName(assemblyPath)!);
+        var report = runner.TestRun(Path.GetDirectoryName(this.assemblyPath)!);
 
         Assert.That(report.Results, Has.Some.Property("ClassName").EqualTo("SimpleTests"));
         Assert.That(report.Results, Has.Some.Property("ClassName").EqualTo("FailedTests"));
@@ -69,8 +70,6 @@ public class TestRunner
 
     private string GetFakeTestsAssemblyPath()
     {
-        // var fakeTestsAssembly = typeof(MyNUnit.FakeTests.SimpleTests).Assembly;
-        // return fakeTestsAssembly.Location;
         try
         {
             var type = Type.GetType("MyNUnit.FakeTests.SimpleTests, MyNUnit.FakeTests");

@@ -20,7 +20,7 @@ public class Runner
     /// </summary>
     /// <param name="path">The path to run assemblies.</param>
     /// <returns>The list of results.</returns>
-    public Reporter TestRunner(string path)
+    public Reporter TestRun(string path)
     {
         string[] allDlls = Directory.GetFiles(path, "*Tests*.dll", SearchOption.AllDirectories);
         string[] allExes = Directory.GetFiles(path, "*Tests*.exe", SearchOption.AllDirectories);
@@ -28,11 +28,11 @@ public class Runner
         var allTests = new List<TestClassInfo>();
         foreach (var assemblyPath in allAssemblies)
         {
-            var testClasses = this.searcher.TestSearcher(assemblyPath);
+            var testClasses = this.searcher.TestSearch(assemblyPath);
             allTests.AddRange(testClasses);
         }
 
-        var result = this.executor.TestExecutor(allTests);
+        var result = this.executor.TestExecute(allTests);
         var report = this.reporter.CreateReport(result);
         return report;
     }

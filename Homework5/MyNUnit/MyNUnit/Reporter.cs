@@ -79,26 +79,28 @@ public class Reporter
     /// <summary>
     /// Class for test`s results.
     /// </summary>
-    public class TestResult()
-    {
-        /// <summary>
-        /// Gets or sets the name of test.
-        /// </summary>
-        public string? Name { get; set; }
+    public record TestResult(
+        string? Name,
+        string? ClassName,
+        Status Status,
+        string? Error = null);
 
-        /// <summary>
-        /// Gets or sets the error of test.
-        /// </summary>
-        public string? Error { get; set; }
-
-        /// <summary>
-        /// Gets or sets the status of the test.
-        /// </summary>
-        public Status? Status { get; set; }
-
-        /// <summary>
-        /// Gets or sets the class name.
-        /// </summary>
-        public string? ClassName { get; set; }
-    }
+    // {
+    //     /// <summary>
+    //     /// Gets or sets the name of test.
+    //     /// </summary>
+    //     public string? Name { get; set; }
+    //     /// <summary>
+    //     /// Gets or sets the error of test.
+    //     /// </summary>
+    //     public string? Error { get; set; }
+    //     /// <summary>
+    //     /// Gets or sets the status of the test.
+    //     /// </summary>
+    //     public Status? Status { get; set; }
+    //     /// <summary>
+    //     /// Gets or sets the class name.
+    //     /// </summary>
+    //     public string? ClassName { get; set; }
+    // }
 }

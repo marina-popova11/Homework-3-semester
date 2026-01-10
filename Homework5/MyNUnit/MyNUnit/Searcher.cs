@@ -17,7 +17,7 @@ public class Searcher
     /// </summary>
     /// <param name="path">The path to search assemblies.</param>
     /// <returns>the list of testClasses.</returns>
-    public List<TestClassInfo> TestSearcher(string path)
+    public List<TestClassInfo> TestSearch(string path)
     {
         var testClasses = new List<TestClassInfo>();
         try
@@ -28,16 +28,21 @@ public class Searcher
             foreach (var type in types)
             {
                 var classInfo = new TestClassInfo { ClassType = type };
-                MethodInfo[] methods = type.GetMethods();
+                MethodInfo[] methods = type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
                 bool hasTest = false;
                 foreach (var method in methods)
                 {
                     TestAttribute? testAt = method.GetCustomAttribute<TestAttribute>();
                     if (testAt != null)
                     {
-                        classInfo.TestMethods!.Add(method);
-                        Console.WriteLine($"Found test method: {method.Name}");
-                        hasTest = true;
+                        if (this.ValidateTestMethod(method, "Test"))
+                        {
+                            classInfo.TestMethods!.Add(method);
+                            Console.WriteLine($"Found test method: {method.Name}");
+                            hasTest = true;
+                        }
+
+                        continue;
                     }
                     else
                     {
@@ -45,46 +50,56 @@ public class Searcher
                         var allAttributes = method.GetCustomAttributes();
                         foreach (var attr in allAttributes)
                         {
-                            Console.WriteLine($"    - Attribute: {attr.GetType().FullName}");
+                            Console.WriteLine($"Attribute: {attr.GetType().FullName}");
                         }
                     }
 
                     BeforeAttribute? before = method.GetCustomAttribute<BeforeAttribute>();
                     if (before != null)
                     {
-                        classInfo.BeforeMethods!.Add(method);
-                        Console.WriteLine($"Found Before method: {method.Name}");
+                        if (this.ValidateInstanceMethod(method, "Before"))
+                        {
+                            classInfo.BeforeMethods!.Add(method);
+                            Console.WriteLine($"Found Before method: {method.Name}");
+                        }
+
+                        continue;
                     }
 
                     AfterAttribute? after = method.GetCustomAttribute<AfterAttribute>();
                     if (after != null)
                     {
-                        classInfo.AfterMethods!.Add(method);
-                        Console.WriteLine($"Found After method: {method.Name}");
+                        if (this.ValidateInstanceMethod(method, "After"))
+                        {
+                            classInfo.AfterMethods!.Add(method);
+                            Console.WriteLine($"Found After method: {method.Name}");
+                        }
+
+                        continue;
                     }
 
                     BeforeClassAttribute? beforeClass = method.GetCustomAttribute<BeforeClassAttribute>();
                     if (beforeClass != null)
                     {
-                        if (!method.IsStatic)
+                        if (this.ValidateStaticMethod(method, "BeforeClass"))
                         {
-                            Console.WriteLine("BeforeClass Method should be static");
+                            classInfo.BeforeClassMethods!.Add(method);
+                            Console.WriteLine($"Found BeforeClass method: {method.Name}");
                         }
 
-                        classInfo.BeforeClassMethods!.Add(method);
-                        Console.WriteLine($"Found BeforeClass method: {method.Name}");
+                        continue;
                     }
 
                     AfterClassAttribute? afterClass = method.GetCustomAttribute<AfterClassAttribute>();
                     if (afterClass != null)
                     {
-                        if (!method.IsStatic)
+                        if (this.ValidateStaticMethod(method, "AfterClass"))
                         {
-                            Console.WriteLine("AfterClass Method should be static");
+                            classInfo.AfterClassMethods!.Add(method);
+                            Console.WriteLine($"Found AfterClass method: {method.Name}");
                         }
 
-                        classInfo.AfterClassMethods!.Add(method);
-                        Console.WriteLine($"Found AfterClass method: {method.Name}");
+                        continue;
                     }
                 }
 
@@ -104,5 +119,74 @@ public class Searcher
         }
 
         return testClasses;
+    }
+
+    private bool ValidateTestMethod(MethodInfo method, string kind)
+    {
+        if (method.IsStatic)
+        {
+            Console.WriteLine($"{kind} method '{method.Name}' must not be static.");
+            return false;
+        }
+
+        if (method.ReturnType != typeof(void))
+        {
+            Console.WriteLine($"{kind} method '{method.Name}' must return void.");
+            return false;
+        }
+
+        if (method.GetParameters().Length > 0)
+        {
+            Console.WriteLine($"{kind} method '{method.Name}' must not have parameters.");
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool ValidateInstanceMethod(MethodInfo method, string kind)
+    {
+        if (method.IsStatic)
+        {
+            Console.WriteLine($"{kind} method '{method.Name}' must not be static.");
+            return false;
+        }
+
+        if (method.ReturnType != typeof(void))
+        {
+            Console.WriteLine($"{kind} method '{method.Name}' must return void.");
+            return false;
+        }
+
+        if (method.GetParameters().Length > 0)
+        {
+            Console.WriteLine($"{kind} method '{method.Name}' must not have parameters.");
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool ValidateStaticMethod(MethodInfo method, string kind)
+    {
+        if (!method.IsStatic)
+        {
+            Console.WriteLine($"{kind} method '{method.Name}' must be static.");
+            return false;
+        }
+
+        if (method.ReturnType != typeof(void))
+        {
+            Console.WriteLine($"{kind} method '{method.Name}' must return void.");
+            return false;
+        }
+
+        if (method.GetParameters().Length > 0)
+        {
+            Console.WriteLine($"{kind} method '{method.Name}' must not have parameters.");
+            return false;
+        }
+
+        return true;
     }
 }
